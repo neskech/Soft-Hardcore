@@ -1,0 +1,48 @@
+{
+	"schemaVersion": 1,
+	"id": "softhardcore",
+	"version": "${version}",
+	"name": "SoftHardcore",
+	"description": "A server side hardcore mod that gives each player a limited number of lives",
+	"authors": [
+		"Neskech"
+	],
+	"contact": {
+		"homepage": "https://fabricmc.net/",
+		"sources": "https://github.com/FabricMC/fabric-example-mod"
+	},
+	"license": "MIT",
+	"icon": "assets/softhardcore/icon.png",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+          "net.ness.softhardcore.SoftHardcore"
+		],
+		"client": [
+			"net.ness.softhardcore.SoftHardcoreClient"
+		],
+		"fabric-datagen": [
+			"net.ness.softhardcore.SofthardcoreDataGenerator"
+		],
+		"cardinal-components": [
+			"net.ness.softhardcore.component.MyComponents"
+		]
+	},
+	"mixins": [
+		"softhardcore.mixins.json"
+	],
+	"custom": {
+		"cardinal-components": [
+			"softhardcore:lives"
+		]
+	},
+	"depends": {
+		"fabricloader": ">=0.16.10",
+		"minecraft": "~1.20.1",
+		"java": ">=17",
+		"fabric-api": "*"
+	},
+	"suggests": {
+		"another-mod": "*"
+	}
+}
