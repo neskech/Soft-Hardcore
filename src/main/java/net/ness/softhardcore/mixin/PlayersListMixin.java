@@ -14,13 +14,11 @@ import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.scoreboard.Scoreboard;
 import net.minecraft.scoreboard.ScoreboardObjective;
 import net.minecraft.scoreboard.Team;
-import net.minecraft.util.Colors;
 import net.minecraft.util.Identifier;
 import net.ness.softhardcore.SoftHardcore;
 import net.ness.softhardcore.SoftHardcoreClient;
 import net.ness.softhardcore.component.LivesComponent;
 import net.ness.softhardcore.component.MyComponents;
-import net.ness.softhardcore.config.MyConfig;
 import net.ness.softhardcore.ui.ScalingSystem;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -34,6 +32,8 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.util.*;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Mixin(PlayerListHud.class)
 public abstract class PlayersListMixin {
@@ -44,16 +44,17 @@ public abstract class PlayersListMixin {
     private static final int PLAYER_ENTRY_BACKGROUND_COLOR = 0x40FFFFFF; // 25% white tint overlay
     
     private static final Identifier TEAM_ICON = new Identifier(SoftHardcore.MOD_ID, "textures/team_icon.png");
-    private static final Identifier HEART_ICON = new Identifier(SoftHardcore.MOD_ID, "textures/heart_icon.png");
     private static final Identifier ICONS_TEXTURE = new Identifier("textures/gui/icons.png");
 
     private static final Vector2i TEAM_ICON_TEX_DIMENSIONS = new Vector2i(8, 8);
-    private static final Vector2i HEART_ICON_TEX_DIMENSIONS = new Vector2i(16, 16);
 
     @Shadow @Final
     private static Comparator<PlayerListEntry> ENTRY_ORDERING;
 
     @Accessor("client") abstract MinecraftClient client();
+    
+    // Cache to store lives data for dead players
+    private static final Map<UUID, Integer> livesCache = new ConcurrentHashMap<>();
 
     // Scaling methods that take parent container dimensions
     private static int playerEntryWidth(ScalingSystem.ContainerDimensions parent) { 
@@ -196,13 +197,9 @@ public abstract class PlayersListMixin {
         int pingHeightSize = pingHeight(entryContainer);
         int pingWidthSize = pingWidth(entryContainer);
 
-        ClientWorld world = this.client().world;
-        if (world != null) {
-            PlayerEntity player = world.getPlayerByUuid(profile.getId());
-            if (player != null) {
-                PlayerSkinDrawer.draw(ctx, entry.getSkinTexture(), x, y, iconSize, false, false);
-            }
-        }
+        // Always draw the skin texture from PlayerListEntry, even for dead players
+        // PlayerListEntry persists even when players are dead/not in world
+        PlayerSkinDrawer.draw(ctx, entry.getSkinTexture(), x, y, iconSize, false, false);
 
         x += iconSize + iconMarginSize;
         Team team = scoreboard.getPlayerTeam(profile.getName());
@@ -220,12 +217,37 @@ public abstract class PlayersListMixin {
         drawPingBars(ctx, rightX, y, pingWidthSize, pingHeightSize, entry.getLatency());
 
         String lives = "?";
+        UUID playerUuid = profile.getId();
+        
+        // Try to get lives data from the world player first (if alive)
         PlayerEntity p = map.get(profile.getName());
         if (p != null) {
             LivesComponent comp = MyComponents.LIVES_KEY.get(p);
             if (comp != null) {
                 int l = comp.getLives();
                 lives = String.valueOf(l);
+                // Update cache with current lives data
+                livesCache.put(playerUuid, l);
+            }
+        } else {
+            // If player is not in world (dead), try to get lives data from cache
+            Integer cachedLives = livesCache.get(playerUuid);
+            if (cachedLives != null) {
+                lives = String.valueOf(cachedLives);
+            } else {
+                // If not in cache, try to get from client world (fallback)
+                ClientWorld world = this.client().world;
+                if (world != null) {
+                    PlayerEntity deadPlayer = world.getPlayerByUuid(playerUuid);
+                    if (deadPlayer != null) {
+                        LivesComponent comp = MyComponents.LIVES_KEY.get(deadPlayer);
+                        if (comp != null) {
+                            int l = comp.getLives();
+                            lives = String.valueOf(l);
+                            livesCache.put(playerUuid, l);
+                        }
+                    }
+                }
             }
         }
 
@@ -290,5 +312,21 @@ public abstract class PlayersListMixin {
         float g = ((color >> 8) & 0xFF) / 255.0f;
         float b = (color & 0xFF) / 255.0f;
         RenderSystem.setShaderColor(r, g, b, 1.0f);
+    }
+    
+    /**
+     * Updates the lives cache for a player. This should be called when a player's lives change
+     * or when they die, to ensure the cache stays up to date.
+     */
+    private static void updateLivesCache(UUID playerUuid, int lives) {
+        livesCache.put(playerUuid, lives);
+    }
+    
+    /**
+     * Clears the lives cache. This can be called when disconnecting from a server
+     * to prevent stale data.
+     */
+    private static void clearLivesCache() {
+        livesCache.clear();
     }
 }

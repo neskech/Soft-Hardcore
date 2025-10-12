@@ -1,17 +1,14 @@
 package net.ness.softhardcore;
 
-import com.mojang.authlib.GameProfile;
 import net.fabricmc.fabric.api.networking.v1.PacketSender;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.item.ItemStack;
 import net.minecraft.registry.Registries;
-import net.minecraft.registry.Registry;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.PlayerManager;
 import net.minecraft.server.network.ServerPlayNetworkHandler;
 import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.server.world.ServerWorld;
 import net.minecraft.text.Text;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Formatting;
@@ -21,6 +18,7 @@ import net.ness.softhardcore.component.MyComponents;
 import net.ness.softhardcore.config.HeartDropMode;
 import net.ness.softhardcore.config.MyConfig;
 import net.ness.softhardcore.event.PlayerDeathCallback;
+import net.ness.softhardcore.util.LivesCacheManager;
 
 import java.time.Instant;
 import java.util.Date;
@@ -38,6 +36,9 @@ public class EventLogic {
         LivesComponent component = MyComponents.LIVES_KEY.get(player);
         component.decrement();
         component.setLastLifeLostTime(System.currentTimeMillis());
+        
+        // Update the lives cache for the scoreboard
+        LivesCacheManager.updateLivesCache(player.getUuid(), component.getLives());
 
         // Only ban if the player's run out of lives
         if (component.getLives() > 0) {
@@ -161,6 +162,9 @@ public class EventLogic {
             long currentTime = System.currentTimeMillis();
             component.setLastLifeRegenTime(currentTime);
             component.setLastLifeLostTime(currentTime);
+            
+            // Update the lives cache for the scoreboard
+            LivesCacheManager.updateLivesCache(player.getUuid(), component.getLives());
         }
         
         // Trigger bulk sync to ensure joining player sees all other players' lives
@@ -172,6 +176,9 @@ public class EventLogic {
         for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
             LivesComponent component = MyComponents.LIVES_KEY.get(player);
             MyComponents.LIVES_KEY.sync(player);
+            
+            // Update the lives cache for the scoreboard
+            LivesCacheManager.updateLivesCache(player.getUuid(), component.getLives());
         }
     }
 
