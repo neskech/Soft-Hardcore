@@ -79,16 +79,4 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
             buffer.vertex(matrix, x2, y1, 0).color(r, g, b, a).next();
             buffer.vertex(matrix, x1, y1, 0).color(r, g, b, a).next();
         }
-
-        // private int getHealthColor(int health) {
-        //     if (health >= 18) {
-        //         return 0x00FF00; // green
-        //     } else if (health >= 10) {
-        //         return 0xFFFF00; // yellow
-        //     } else if (health > 4) {
-        //         return 0xFF8800; // orange
-        //     } else {
-        //         return 0xFF0000; // red
-        //     }
-        // }
     }
