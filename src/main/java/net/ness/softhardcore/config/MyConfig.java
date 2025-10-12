@@ -14,6 +14,7 @@ public class MyConfig {
     public static HeartDropMode HEART_DROP_MODE;
     public static Duration LIFE_REGEN_COOLDOWN;
     public static int RETURNING_LIVES;
+    public static int LIVES_GAINED_FROM_HEART;
 
     public static void registerConfig() {
         BasicConfigProvider provider = new BasicConfigProvider();
@@ -29,6 +30,7 @@ public class MyConfig {
         provider.addKeyValuePair(new Pair<>("heart.drop.mode", "NEUTRAL"), "PASSIVE|NEUTRAL|TEAM|COMPETITIVE");
         provider.addKeyValuePair(new Pair<>("life.regen.cooldown", "PT24H"), "ISO-8601 duration");
         provider.addKeyValuePair(new Pair<>("returning.lives", 1), "Int (1 to default.lives)");
+        provider.addKeyValuePair(new Pair<>("lives.gained.from.heart", 1), "Int (lives gained when consuming a heart)");
     }
 
     private static void assignClassDefaults() {
@@ -49,6 +51,8 @@ public class MyConfig {
         // Validate returning lives
         int returningLives = CONFIG.getOrDefault("returning.lives", 1);
         RETURNING_LIVES = Math.max(1, Math.min(returningLives, DEFAULT_LIVES));
+        
+        LIVES_GAINED_FROM_HEART = CONFIG.getOrDefault("lives.gained.from.heart", 1);
     }
 
 }

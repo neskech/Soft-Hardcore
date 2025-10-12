@@ -10,7 +10,7 @@ import net.minecraft.util.Identifier;
 import net.ness.softhardcore.SoftHardcore;
 
 public class ModItems {
-    public static final Item LIFE_HEART = RegisterItem("life_heart", new Item(new FabricItemSettings()));
+    public static final Item LIFE_HEART = RegisterItem("life_heart", new LifeHeartItem(new FabricItemSettings()));
 
     private static Item RegisterItem(String name, Item item) {
         Identifier id = new Identifier(SoftHardcore.MOD_ID, name);
