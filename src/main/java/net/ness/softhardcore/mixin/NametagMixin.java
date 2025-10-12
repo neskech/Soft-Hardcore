@@ -1,102 +1,94 @@
 package net.ness.softhardcore.mixin;
 
+import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.render.VertexConsumerProvider;
-import net.minecraft.client.render.entity.EntityRenderer;
+import net.minecraft.client.render.entity.EntityRenderDispatcher;
+import net.minecraft.client.network.AbstractClientPlayerEntity;
+import net.minecraft.client.render.entity.PlayerEntityRenderer;
 import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.util.math.RotationAxis;
+import net.minecraft.text.Text;
+//import net.minecraft.util.math.RotationAxis;
 import net.ness.softhardcore.component.LivesComponent;
 import net.ness.softhardcore.component.MyComponents;
 import net.ness.softhardcore.config.MyConfig;
+import org.joml.Matrix4f;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-@Mixin(PlayerEntityRenderer.class)
-public abstract class NametagMixin<T extends Entity> {
+    @Mixin(PlayerEntityRenderer.class)
+    public abstract class NametagMixin {
 
-    @Inject(method = "renderLabelIfPresent", at = @At("TAIL"))
-    private void renderExtraNametag(Entity entity, float yaw, float tickDelta, MatrixStack matrices, VertexConsumerProvider vertexConsumers, int light, CallbackInfo ci) {
-        if (shouldRenderExtraNametag(entity)) {
-            renderCustomNametag(entity, matrices, vertexConsumers, light);
-        }
-    }
+        @Inject(method = "renderLabelIfPresent", at = @At("TAIL"))
+        private void renderExtraNametag(AbstractClientPlayerEntity player, Text text, MatrixStack matrices, VertexConsumerProvider vertexConsumers, int light, CallbackInfo ci) {
+            LivesComponent component = MyComponents.LIVES_KEY.get(player);
+            if (component == null) return; 
 
-    private boolean shouldRenderExtraNametag(Entity entity) {
-        return entity instanceof PlayerEntity;
-    }
+            // Get the dispatcher and text renderer from MinecraftClient
+            MinecraftClient client = MinecraftClient.getInstance();
+            EntityRenderDispatcher dispatcher = client.getEntityRenderDispatcher();
+            TextRenderer textRenderer = client.textRenderer;
+            
+            int health = Math.round(player.getHealth());
+            int armor = player.getArmor();
+            String heartSymbol = "\u2764";
+            String armorSymbol = "\uD83D\uDEE1"; 
 
-    private void renderCustomNametag(Entity entity, MatrixStack matrices, VertexConsumerProvider vertexConsumers, int light) {
-        if (!(entity instanceof PlayerEntity player)) {
-            return;
-        }
+            String healthText = heartSymbol + " " + health;
+            String armorText = armorSymbol + " " + armor;
 
-        double d = this.dispatcher.getSquaredDistanceToCamera(entity);
-		if (!(d > 4096.0)) {
-			boolean bl = !entity.isSneaky();
-			float f = entity.getNameLabelHeight();
-			int i = "deadmau5".equals(text.getString()) ? -10 : 0;
-			matrices.push();
-			matrices.translate(0.0F, f, 0.0F);
-			matrices.multiply(this.dispatcher.getRotation());
-			matrices.scale(-0.025F, -0.025F, 0.025F);
-			Matrix4f matrix4f = matrices.peek().getPositionMatrix();
-			float g = MinecraftClient.getInstance().options.getTextBackgroundOpacity(0.25F);
-			int j = (int)(g * 255.0F) << 24;
-			TextRenderer textRenderer = this.getTextRenderer();
-			float h = (float)(-textRenderer.getWidth(text) / 2);
-			textRenderer.draw(
-				text, h, (float)i, 553648127, false, matrix4f, vertexConsumers, bl ? TextRenderer.TextLayerType.SEE_THROUGH : TextRenderer.TextLayerType.NORMAL, j, light
-			);
-			if (bl) {
-				textRenderer.draw(text, h, (float)i, -1, false, matrix4f, vertexConsumers, TextRenderer.TextLayerType.NORMAL, 0, light);
-			}
+            String combined = healthText + "   " + armorText;
+            float totalWidth = textRenderer.getWidth(combined);
+            float startX = -totalWidth / 2f;        
 
-			matrices.pop();
-		}
+            int healthColor = 0xDC143C; // Crimson red
+            int armorColor = 0x3399FF; // soft blue
 
-        // Get lives from component
-        LivesComponent component = MyComponents.LIVES_KEY.get(player);
-        if (component == null) {
-            return; // Component not available yet
-        }
+            matrices.push();
+            matrices.translate(0.0F, player.getNameLabelHeight() + 0.35F, 0.0F);
+            matrices.multiply(dispatcher.getRotation());
+            matrices.scale(-0.025F, -0.025F, 0.025F);
+    
+            Matrix4f matrix4f = matrices.peek().getPositionMatrix();
+            int bgColor = (int)(0.15F * 255.0F) << 24; // adjust float to change opacity 
+            fillRect(matrix4f, vertexConsumers, startX - 3, -2, startX + totalWidth + 3, 9, bgColor);
 
-        int lives = component.getLives();
-        
-        // Translate the matrix to position the new nametag below the existing one
-        matrices.push();
+            float currentX = startX;
+            // Draw health (heart + number)
+            textRenderer.draw(healthText, currentX, 0, healthColor, false, matrix4f, vertexConsumers, TextRenderer.TextLayerType.NORMAL, 0, light);
 
-        // Position the custom nametag slightly below the original
-        matrices.translate(0.0, -0.15, 2.0);
-        matrices.scale(0.025f, 0.025f, 0.025f);
-        matrices.multiply(RotationAxis.NEGATIVE_X.rotationDegrees(180));
-        
-        // Set up the text with color coding
-        String livesText = "❤ " + lives;
-        int textColor = getLivesColor(lives);
+            currentX += textRenderer.getWidth(healthText + "  ");
 
-        // Get text renderer from the client
-        TextRenderer renderer = net.minecraft.client.MinecraftClient.getInstance().textRenderer;
+            // Draw armor (blue)
+            textRenderer.draw(armorText, currentX, 0, armorColor, false, matrix4f, vertexConsumers, TextRenderer.TextLayerType.NORMAL, 0, light);
 
-        // Render the text
-        float h = (float)(-renderer.getWidth(livesText) / 2);
-        float i = 0;
-        renderer.draw(livesText, h, i, textColor, false, matrices.peek().getPositionMatrix(), vertexConsumers, TextRenderer.TextLayerType.NORMAL, 0, light);
         matrices.pop();
-    }
-
-    private int getLivesColor(int lives) {
-        if (lives >= MyConfig.DEFAULT_LIVES) {
-            return 0x00FF00; // Green - at max lives
-        } else if (lives >= MyConfig.DEFAULT_LIVES * 0.5) {
-            return 0xFFFF00; // Yellow - 50-99% of max
-        } else if (lives > 1) {
-            return 0xFF8800; // Orange - 25-49% of max
-        } else {
-            return 0xFF0000; // Red - < 25% of max
         }
+
+        private static void fillRect(Matrix4f matrix, VertexConsumerProvider vertexConsumers, float x1, float y1, float x2, float y2, int color) {
+            var buffer = vertexConsumers.getBuffer(net.minecraft.client.render.RenderLayer.getGuiOverlay());
+            float a = (color >> 24 & 255) / 255.0F;
+            float r = (color >> 16 & 255) / 255.0F;
+            float g = (color >> 8 & 255) / 255.0F;
+            float b = (color & 255) / 255.0F;
+            buffer.vertex(matrix, x1, y2, 0).color(r, g, b, a).next();
+            buffer.vertex(matrix, x2, y2, 0).color(r, g, b, a).next();
+            buffer.vertex(matrix, x2, y1, 0).color(r, g, b, a).next();
+            buffer.vertex(matrix, x1, y1, 0).color(r, g, b, a).next();
+        }
+
+        // private int getHealthColor(int health) {
+        //     if (health >= 18) {
+        //         return 0x00FF00; // green
+        //     } else if (health >= 10) {
+        //         return 0xFFFF00; // yellow
+        //     } else if (health > 4) {
+        //         return 0xFF8800; // orange
+        //     } else {
+        //         return 0xFF0000; // red
+        //     }
+        // }
     }
-}
