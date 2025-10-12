@@ -7,6 +7,7 @@ import net.minecraft.util.Identifier;
 import net.ness.softhardcore.component.LivesComponent;
 import net.ness.softhardcore.component.MyComponents;
 import net.ness.softhardcore.config.MyConfig;
+import net.ness.softhardcore.ui.ScalingSystem;
 
 public class LivesHudOverlayCallback implements HudRenderCallback {
     private static final Identifier HEART_TEXTURE = new Identifier(SoftHardcore.MOD_ID, "textures/heart_icon.png");
@@ -26,20 +27,32 @@ public class LivesHudOverlayCallback implements HudRenderCallback {
         int lives = component.getLives();
         int maxLives = MyConfig.DEFAULT_LIVES;
 
+        // Create screen container dimensions
+        ScalingSystem.ContainerDimensions screenContainer = ScalingSystem.ContainerDimensions.screen();
+        
+        // Calculate dimensions relative to screen
+        int hudWidth = ScalingSystem.widthPercent(screenContainer, 0.12f); // 12% of screen width
+        int hudHeight = ScalingSystem.heightPercent(screenContainer, 0.03f); // 3% of screen height
+        int iconSize = ScalingSystem.minDimensionPercent(screenContainer, 0.02f); // 2% of smaller dimension
+        int margin = ScalingSystem.widthPercent(screenContainer, 0.01f); // 1% margin
+        int padding = ScalingSystem.widthPercent(screenContainer, 0.005f); // 0.5% padding
+
         // Position in top-right corner
-        int x = this.client.getWindow().getScaledWidth() - 100;
-        int y = 10;
+        int x = screenContainer.width - hudWidth - margin;
+        int y = margin;
 
         // Draw semi-transparent background
-        drawContext.fill(x - 5, y - 5, x + 85, y + 25, 0x80000000);
+        drawContext.fill(x - padding, y - padding, x + hudWidth + padding, y + hudHeight + padding, 0x80000000);
 
         // Draw heart icon
-        drawContext.drawTexture(HEART_TEXTURE, x, y, 0, 0, 16, 16, 16, 16);
+        drawContext.drawTexture(HEART_TEXTURE, x, y, 0, 0, iconSize, iconSize, 16, 16);
 
         // Draw lives text with color coding
         String livesText = lives + "/" + maxLives;
         int textColor = getLivesColor(lives, maxLives);
-        drawContext.drawText(client.textRenderer, livesText, x + 20, y + 4, textColor, true);
+        int textX = x + iconSize + ScalingSystem.widthPercent(ScalingSystem.ContainerDimensions.of(hudWidth, 1), 0.05f);
+        int textY = y + (hudHeight - client.textRenderer.fontHeight) / 2;
+        drawContext.drawText(client.textRenderer, livesText, textX, textY, textColor, true);
     }
 
     private int getLivesColor(int lives, int maxLives) {

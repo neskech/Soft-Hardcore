@@ -32,15 +32,15 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
             EntityRenderDispatcher dispatcher = client.getEntityRenderDispatcher();
             TextRenderer textRenderer = client.textRenderer;
             
-            int health = Math.round(player.getHealth());
+            int lives = component.getLives();
             int armor = player.getArmor();
             String heartSymbol = "\u2764";
             String armorSymbol = "\uD83D\uDEE1"; 
 
-            String healthText = heartSymbol + " " + health;
+            String livesText = heartSymbol + " " + lives;
             String armorText = armorSymbol + " " + armor;
 
-            String combined = healthText + "   " + armorText;
+            String combined = livesText + "   " + armorText;
             float totalWidth = textRenderer.getWidth(combined);
             float startX = -totalWidth / 2f;        
 
@@ -58,9 +58,9 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
             float currentX = startX;
             // Draw health (heart + number)
-            textRenderer.draw(healthText, currentX, 0, healthColor, false, matrix4f, vertexConsumers, TextRenderer.TextLayerType.NORMAL, 0, light);
+            textRenderer.draw(livesText, currentX, 0, healthColor, false, matrix4f, vertexConsumers, TextRenderer.TextLayerType.NORMAL, 0, light);
 
-            currentX += textRenderer.getWidth(healthText + "  ");
+            currentX += textRenderer.getWidth(livesText + "  ");
 
             // Draw armor (blue)
             textRenderer.draw(armorText, currentX, 0, armorColor, false, matrix4f, vertexConsumers, TextRenderer.TextLayerType.NORMAL, 0, light);

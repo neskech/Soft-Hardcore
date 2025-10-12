@@ -9,24 +9,19 @@ import net.minecraft.client.gui.PlayerSkinDrawer;
 import net.minecraft.client.gui.hud.PlayerListHud;
 import net.minecraft.client.network.AbstractClientPlayerEntity;
 import net.minecraft.client.network.PlayerListEntry;
-import net.minecraft.client.render.entity.LivingEntityRenderer;
-import net.minecraft.client.render.entity.PlayerModelPart;
 import net.minecraft.client.world.ClientWorld;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.scoreboard.Scoreboard;
 import net.minecraft.scoreboard.ScoreboardObjective;
 import net.minecraft.scoreboard.Team;
-import net.minecraft.text.MutableText;
-import net.minecraft.text.Text;
 import net.minecraft.util.Colors;
-import net.minecraft.util.Formatting;
 import net.minecraft.util.Identifier;
-import net.minecraft.world.GameMode;
 import net.ness.softhardcore.SoftHardcore;
 import net.ness.softhardcore.SoftHardcoreClient;
 import net.ness.softhardcore.component.LivesComponent;
 import net.ness.softhardcore.component.MyComponents;
 import net.ness.softhardcore.config.MyConfig;
+import net.ness.softhardcore.ui.ScalingSystem;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Vector2i;
@@ -42,403 +37,261 @@ import java.util.*;
 
 @Mixin(PlayerListHud.class)
 public abstract class PlayersListMixin {
-    ////////////////////////////////////////////////////////////////////////////////////
-    /////////////////////////* GUI CONSTANTS AND HELPERS *//////////////////////////////
-    ////////////////////////////////////////////////////////////////////////////////////
-    private final static int MAX_ROWS = 5;
 
-    private static int getWidth() {
-        return SoftHardcoreClient.getClient().getWindow().getScaledWidth();
-    }
-
-    private static int getHeight() {
-        return SoftHardcoreClient.getClient().getWindow().getScaledHeight();
-    }
-
-    ////////////////////////////////////////////////////////////////////////////////////
-    /////////////////////////* GUI DIMENSIONS */////////////////////////////////////////
-    ////////////////////////////////////////////////////////////////////////////////////
-
-    private static int playerEntryWidth() {
-        return (int)(0.28f * getWidth()); // Increased from 0.22f to prevent spillover
-    }
-
-    private static int playerEntryHeight() {
-        return (int)(0.025f * getHeight());
-    }
-
-    private static int playerEntryGapX() {
-        return (int)(0.01f * getWidth());
-    }
-
-    private static int playerEntryGapY() {
-        return (int)(0.01f * getHeight());
-    }
-
-    private static int hudBackgroundMarginX() {
-        return (int)(0.00f * getWidth());
-    }
-
-    private static int hudBackgroundTopMarginY() {
-        return (int)(0.06f * getHeight());
-    }
-
-    private static int hudBackgroundBottomMarginY() {
-        return (int)(0.06f * getHeight());
-    }
-
-    private static int hudMarginTopY() {
-        return (int)(0.01f * getHeight());
-    }
-
-    private static int nameTagMargin() {
-        return (int)(0.02f * playerEntryWidth()); // Increased gap between team icon and name
-    }
-
-    private static int iconMargin() {
-        return (int)(0.0125f * playerEntryWidth());
-    }
-
-    private static int iconDimensions() {
-        return playerEntryHeight();
-    }
-
-    ////////////////////////////////////////////////////////////////////////////////////
-    /////////////////////////* TEXTURES *///////////////////////////////////////////////
-    ////////////////////////////////////////////////////////////////////////////////////
-
+    private static final int MAX_ROWS = 5;
+    
+    private static final int BACKGROUND_COLOR = 0x80000000;      // 50% black
+    private static final int PLAYER_ENTRY_BACKGROUND_COLOR = 0x40FFFFFF; // 25% white tint overlay
+    
     private static final Identifier TEAM_ICON = new Identifier(SoftHardcore.MOD_ID, "textures/team_icon.png");
     private static final Identifier HEART_ICON = new Identifier(SoftHardcore.MOD_ID, "textures/heart_icon.png");
-
-    ////////////////////////////////////////////////////////////////////////////////////
-    /////////////////////////* TEXTURE DIMENSIONS */////////////////////////////////////
-    ////////////////////////////////////////////////////////////////////////////////////
+    private static final Identifier ICONS_TEXTURE = new Identifier("textures/gui/icons.png");
 
     private static final Vector2i TEAM_ICON_TEX_DIMENSIONS = new Vector2i(8, 8);
     private static final Vector2i HEART_ICON_TEX_DIMENSIONS = new Vector2i(16, 16);
 
-    ////////////////////////////////////////////////////////////////////////////////////
-    /////////////////////////* COLORS */////////////////////////////////////////////////
-    ////////////////////////////////////////////////////////////////////////////////////
-    ///
-    private final static int BACKGROUND_COLOR = 0x80000000; // Dark semi-transparent background
-    private final static int PLAYER_ENTRY_BACKGROUND_COLOR = 0x60000000; // Lighter semi-transparent background for player entries
-
-    @Shadow
-    @Final
+    @Shadow @Final
     private static Comparator<PlayerListEntry> ENTRY_ORDERING;
 
-    @Accessor("client")
-    abstract MinecraftClient client();
+    @Accessor("client") abstract MinecraftClient client();
 
-    @Accessor("header")
-    abstract Text header();
-
-
-
-    List<PlayerListEntry> collectPlayerEntries() {
-        return this.client().player.networkHandler.getListedPlayerListEntries().stream().sorted(ENTRY_ORDERING).limit(80L).toList();
+    // Scaling methods that take parent container dimensions
+    private static int playerEntryWidth(ScalingSystem.ContainerDimensions parent) { 
+        return ScalingSystem.widthPercent(parent, 0.28f); 
+    }
+    
+    private static int playerEntryHeight(ScalingSystem.ContainerDimensions parent) { 
+        return ScalingSystem.heightPercent(parent, 0.038f); 
+    }
+    
+    private static int playerEntryGapX(ScalingSystem.ContainerDimensions parent) { 
+        return ScalingSystem.widthPercent(parent, 0.01f); 
+    }
+    
+    private static int playerEntryGapY(ScalingSystem.ContainerDimensions parent) { 
+        return ScalingSystem.heightPercent(parent, 0.01f); 
+    }
+    
+    private static int hudBackgroundTopMarginY(ScalingSystem.ContainerDimensions parent) { 
+        return ScalingSystem.heightPercent(parent, 0.06f); 
+    }
+    
+    private static int hudBackgroundBottomMarginY(ScalingSystem.ContainerDimensions parent) { 
+        return ScalingSystem.heightPercent(parent, 0.06f); 
+    }
+    
+    private static int hudMarginTopY(ScalingSystem.ContainerDimensions parent) { 
+        return ScalingSystem.heightPercent(parent, 0.01f); 
+    }
+    
+    private static int nameTagMargin(ScalingSystem.ContainerDimensions parent) { 
+        return ScalingSystem.widthPercent(parent, 0.035f); 
+    }
+    
+    private static int iconMargin(ScalingSystem.ContainerDimensions parent) { 
+        return ScalingSystem.widthPercent(parent, 0.0125f); 
+    }
+    
+    private static int iconDimensions(ScalingSystem.ContainerDimensions parent) { 
+        return ScalingSystem.heightPercent(parent, 1); 
     }
 
-    public Text getPlayerName(PlayerListEntry entry) {
-        return entry.getDisplayName() != null
-                ? this.applyGameModeFormatting(entry, entry.getDisplayName().copy())
-                : this.applyGameModeFormatting(entry, Team.decorateName(entry.getScoreboardTeam(), Text.literal(entry.getProfile().getName())));
+    private static int pingHeight(ScalingSystem.ContainerDimensions parent) { 
+        return ScalingSystem.heightPercent(parent, 1.0f); 
     }
 
+    private static int pingWidth(ScalingSystem.ContainerDimensions parent) { 
+        return ScalingSystem.heightPercent(parent, 1.25f); 
+    }
 
-    private Text applyGameModeFormatting(PlayerListEntry entry, MutableText name) {
-        return entry.getGameMode() == GameMode.SPECTATOR ? name.formatted(Formatting.ITALIC) : name;
+    private static int pingMargin(ScalingSystem.ContainerDimensions parent) { 
+        return ScalingSystem.widthPercent(parent, 0.01f); 
+    }
+
+    private static int livesMargin(ScalingSystem.ContainerDimensions parent) { 
+        return ScalingSystem.widthPercent(parent, 0.025f); 
+    }
+    
+
+    private List<PlayerListEntry> collectPlayerEntries() {
+        return this.client().player.networkHandler.getListedPlayerListEntries().stream()
+                .sorted(ENTRY_ORDERING)
+                .limit(80L)
+                .toList();
     }
 
     @Inject(method = "render", at = @At("HEAD"), cancellable = true)
     public void renderPlayersList(@NotNull DrawContext context, int scaledWindowWidth, Scoreboard scoreboard, @Nullable ScoreboardObjective objective, CallbackInfo ci) {
-        // Retrieve player entries
-        List<PlayerListEntry> playerEntries = this.collectPlayerEntries();
+        List<PlayerListEntry> playerEntries = collectPlayerEntries();
         int numPlayers = playerEntries.size();
 
-        // Calculate the dimensions of the inner bounding box
+        if (numPlayers == 0) return;
+
+        // Create screen container dimensions
+        ScalingSystem.ContainerDimensions screenContainer = ScalingSystem.ContainerDimensions.screen();
+
+        int numColumns = (int) Math.ceil((float) numPlayers / MAX_ROWS);
         int numRows = Math.min(numPlayers, MAX_ROWS);
-        int numColumns = Math.max(1, numPlayers / MAX_ROWS);
-        int innerBoundingWidth = numColumns * playerEntryWidth() + (numColumns - 1) * playerEntryGapX();
-        int innerBoundingHeight = numRows * playerEntryHeight() + (numRows - 1) * playerEntryGapY();
+        
+        // Calculate the bounding width and height of the player entries using screen dimensions
+        int entryWidth = playerEntryWidth(screenContainer);
+        int entryHeight = playerEntryHeight(screenContainer);
+        int gapX = playerEntryGapX(screenContainer);
+        int gapY = playerEntryGapY(screenContainer);
+        
+        int innerWidth = numColumns * entryWidth + (numColumns - 1) * gapX;
+        int innerHeight = numRows * entryHeight + (numRows - 1) * gapY;
 
-        // Calculate the (X, Y) of the first player entry
         int centerX = scaledWindowWidth / 2;
-        int entryX = centerX - innerBoundingWidth / 2;
-        int entryY = hudMarginTopY() + hudBackgroundTopMarginY();
+        int entryX = centerX - innerWidth / 2;
+        int topMarginY = hudMarginTopY(screenContainer);
+        int topBackgroundMarginY = hudBackgroundTopMarginY(screenContainer);
+        int bottomBackgroundMarginY = hudBackgroundBottomMarginY(screenContainer);
+        int entryY = topMarginY + topBackgroundMarginY;
 
-        // Draw the background behind the inner bounding box
-        int leftX = entryX - hudBackgroundMarginX();
-        int rightX = centerX + innerBoundingWidth / 2 + hudBackgroundMarginX();
-        int topY = hudMarginTopY();
-        int bottomY = topY + hudBackgroundTopMarginY() + innerBoundingHeight + hudBackgroundBottomMarginY();
+        int leftX = entryX;
+        int rightX = centerX + innerWidth / 2;
+        int topY = topMarginY;
+        int bottomY = topY + topBackgroundMarginY + innerHeight + bottomBackgroundMarginY;
+
         RenderSystem.enableBlend();
         context.fill(leftX, topY, rightX, bottomY, BACKGROUND_COLOR);
 
-        // Draw the title
-        String title = "THE REALM";
-        TextRenderer textRenderer = this.client().textRenderer;
-        int titleWidth = textRenderer.getWidth(title);
-        int titleX = (getWidth() - titleWidth) / 2;
-        int titleY = topY + 10;
-        drawText(context, textRenderer, title, titleX, titleY, 20, 0xFF0000); // Red title
+        // TextRenderer tr = this.client().textRenderer;
+        // String title = "THE REALM";
+        // drawCenteredText(context, tr, title, screenContainer.width / 2, topY + 10, 0xFF0000);
 
-        // Draw the player count
-        String playerCount = numPlayers + " Players";
-        int countWidth = textRenderer.getWidth(playerCount);
-        int countX = (getWidth() - countWidth) / 2;
-        int countY = titleY + 20;
-        drawText(context, textRenderer, playerCount, countX, countY, 20, Colors.WHITE);
+        // String count = numPlayers + " Players";
+        // drawCenteredText(context, tr, count, screenContainer.width / 2, topY + 25, Colors.WHITE);
 
-        // Draw the player entries
-        HashMap<String, PlayerEntity> name2Player = getStringToPlayerMap();
-        for (int column = 0; column < numColumns; column++) {
-            numRows = Math.min(numPlayers - column * MAX_ROWS, MAX_ROWS);
-            for (int row = 0; row < numRows; row++) {
-                int x = entryX + (playerEntryWidth() + playerEntryGapX()) * column;
-                int y = entryY + (playerEntryHeight() + playerEntryGapY()) * row;
-                int i = column * MAX_ROWS + row;
-                renderPlayerListEntry(context, x, y, playerEntries.get(i), name2Player, scoreboard);
+        Map<String, PlayerEntity> playerMap = buildPlayerMap();
+
+        for (int col = 0; col < numColumns; col++) {
+            for (int row = 0; row < MAX_ROWS; row++) {
+                int i = col * MAX_ROWS + row;
+                if (i >= numPlayers) break;
+                int x = entryX + (entryWidth + gapX) * col;
+                int y = entryY + (entryHeight + gapY) * row;
+                renderPlayerEntry(context, x, y, playerEntries.get(i), playerMap, scoreboard, entryWidth, entryHeight);
             }
         }
-
+        RenderSystem.setShaderColor(1,1,1,1);
         ci.cancel();
     }
 
-    private void renderPlayerListEntry(DrawContext context, int x, int y, PlayerListEntry entry, HashMap<String, PlayerEntity> name2Player, Scoreboard scoreboard) {
-        // Draw the background with semi-transparent black overlay
-        context.fill(x, y, x + playerEntryWidth(), y + playerEntryHeight(), PLAYER_ENTRY_BACKGROUND_COLOR);
+    private void renderPlayerEntry(DrawContext ctx, int x, int y, PlayerListEntry entry, Map<String, PlayerEntity> map, Scoreboard scoreboard, int entryWidth, int entryHeight) {
+        ctx.fill(x, y, x + entryWidth, y + entryHeight, PLAYER_ENTRY_BACKGROUND_COLOR);
+        GameProfile profile = entry.getProfile();
 
-        int originalX = x;
+        int leftX = x;
 
-        // Draw the player skin icon
-        GameProfile gameProfile = entry.getProfile();
+        // Create container dimensions for this player entry
+        ScalingSystem.ContainerDimensions entryContainer = ScalingSystem.ContainerDimensions.of(entryWidth, entryHeight);
+        
+        int iconSize = iconDimensions(entryContainer);
+        int iconMarginSize = iconMargin(entryContainer);
+        int nameTagMarginSize = nameTagMargin(entryContainer);
+        int pingMarginSize = pingMargin(entryContainer);
+        int livesMarginSize = livesMargin(entryContainer);
+        int pingHeightSize = pingHeight(entryContainer);
+        int pingWidthSize = pingWidth(entryContainer);
+
         ClientWorld world = this.client().world;
-        assert world != null;
-        PlayerEntity playerEntity = world.getPlayerByUuid(gameProfile.getId());
-        if (playerEntity != null) {
-            boolean hatVisible = LivingEntityRenderer.shouldFlipUpsideDown(playerEntity);
-            boolean upsideDown = playerEntity.isPartVisible(PlayerModelPart.HAT);
-            PlayerSkinDrawer.draw(context, entry.getSkinTexture(), x, y, iconDimensions(), upsideDown, hatVisible);
-        }
-
-        // Draw the team icon
-        Team team = scoreboard.getPlayerTeam(gameProfile.getName());
-        Formatting teamColor = team == null ? Formatting.RED : team.getColor();
-        x += iconDimensions() + iconMargin();
-        context.setShaderColor(     ((teamColor.getColorValue() >> 16) & 0xFF) / 255.0f, // Red
-                ((teamColor.getColorValue() >> 8) & 0xFF) / 255.0f,  // Green
-                (teamColor.getColorValue() & 0xFF) / 255.0f,         // Blue
-                ((teamColor.getColorValue() >> 24) & 0xFF) / 255.0f );
-        context.drawTexture(TEAM_ICON, x, y, iconDimensions(), iconDimensions(), 0, 0, TEAM_ICON_TEX_DIMENSIONS.x, TEAM_ICON_TEX_DIMENSIONS.y, TEAM_ICON_TEX_DIMENSIONS.x, TEAM_ICON_TEX_DIMENSIONS.y);
-
-        // Draw the name tag
-        TextRenderer textRenderer = this.client().textRenderer;
-        String playerName = gameProfile.getName();
-        x += iconDimensions() + nameTagMargin();
-
-        context.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
-        drawText(context, textRenderer, playerName, x, y, playerEntryHeight(), teamColor.getColorValue());
-        //  context.drawText(textRenderer, playerName, x, y, teamColor.getColorValue(), true);
-
-        // Now let's draw elements from right to left, with proper spacing
-        x = originalX + playerEntryWidth() - iconMargin();
-
-        // Draw the ping icon (Minecraft-style bars)
-        x -= iconDimensions();
-        int latency = entry.getLatency();
-        int pingColor = 0x00FF00; // Green
-        if (latency < 150) pingColor = 0x00FF00; // Green
-        else if (latency < 300) pingColor = 0xFFFF00; // Yellow
-        else pingColor = 0xFF0000; // Red
-        
-        // Draw 5 bars (Minecraft's standard ping display)
-        int barWidth = 2;
-        int barHeight = 4;
-        int barSpacing = 1;
-        int totalWidth = 5 * barWidth + 4 * barSpacing;
-        int startX = x + (iconDimensions() - totalWidth) / 2;
-        int startY = y + (iconDimensions() - barHeight) / 2;
-        
-        for (int i = 0; i < 5; i++) {
-            int barX = startX + i * (barWidth + barSpacing);
-            int currentBarHeight = barHeight;
-            
-            // Determine bar height based on latency
-            if (latency > 150 && i < 2) currentBarHeight = barHeight / 2;
-            else if (latency > 300 && i < 3) currentBarHeight = barHeight / 2;
-            else if (latency > 600 && i < 4) currentBarHeight = barHeight / 2;
-            else if (latency > 1000 && i < 5) currentBarHeight = barHeight / 2;
-            
-            context.fill(barX, startY + barHeight - currentBarHeight, barX + barWidth, startY + barHeight, pingColor);
-        }
-
-        // Draw the lives icon and number
-        x -= iconDimensions() + 4; // Move left by icon width + gap
-        context.drawTexture(HEART_ICON, x, y, iconDimensions(), iconDimensions(), 0, 0, HEART_ICON_TEX_DIMENSIONS.x, HEART_ICON_TEX_DIMENSIONS.y, HEART_ICON_TEX_DIMENSIONS.x, HEART_ICON_TEX_DIMENSIONS.y);
-
-        // Get lives with proper fallback
-        String numLives = "?";
-        int livesColor = Colors.WHITE;
-        
-        if (name2Player.containsKey(playerName)) {
-            PlayerEntity player = name2Player.get(playerName);
-            LivesComponent component = MyComponents.LIVES_KEY.get(player);
-            if (component != null) {
-                int lives = component.getLives();
-                numLives = "" + lives;
-                
-                // Color coding for lives
-                if (lives >= MyConfig.DEFAULT_LIVES) {
-                    livesColor = 0x00FF00; // Green - Full lives
-                } else if (lives >= MyConfig.DEFAULT_LIVES * 0.5) {
-                    livesColor = 0xFFFF00; // Yellow - 50-99% of max
-                } else if (lives > 1) {
-                    livesColor = 0xFF8800; // Orange - 1-49% of max
-                } else {
-                    livesColor = 0xFF0000; // Red - 1 life
-                }
+        if (world != null) {
+            PlayerEntity player = world.getPlayerByUuid(profile.getId());
+            if (player != null) {
+                PlayerSkinDrawer.draw(ctx, entry.getSkinTexture(), x, y, iconSize, false, false);
             }
         }
 
-        // Draw lives number to the left of the heart icon
-        int text_width = textRenderer.getWidth(numLives);
-        x -= text_width + 2; // Small gap between number and heart
-        drawText(context, textRenderer, numLives, x, y, playerEntryHeight(), livesColor);
+        x += iconSize + iconMarginSize;
+        Team team = scoreboard.getPlayerTeam(profile.getName());
+        int color = (team != null && team.getColor() != null) ? team.getColor().getColorValue() : 0xFFFFFF;
+        
+        setShaderColor(color);
+        ctx.drawTexture(TEAM_ICON, x, y, iconSize, iconSize, 0, 0, TEAM_ICON_TEX_DIMENSIONS.x, TEAM_ICON_TEX_DIMENSIONS.y, TEAM_ICON_TEX_DIMENSIONS.x, TEAM_ICON_TEX_DIMENSIONS.y);
+        x += iconSize + nameTagMarginSize;
+        RenderSystem.setShaderColor(1,1,1,1);
 
-        //context.fill(cent);
+        //ctx.drawText(this.client().textRenderer, profile.getName(), x, y, color, true);
+        drawScaledText(ctx, this.client().textRenderer, profile.getName(), x, y, entryWidth / 2, entryHeight, color);
+        
+        // Since we don't know the width of the text, we need to calculate the rightX
+        int rightX = leftX + entryWidth - pingWidthSize - pingMarginSize;
+        drawPingBars(ctx, rightX, y, pingWidthSize, pingHeightSize, entry.getLatency());
+        
+        // ctx.drawText(this.client().textRenderer, heartSymbol, rightX, y, Colors.WHITE, true);
+        // ctx.drawTexture(HEART_ICON, rightX, y, iconSize, iconSize, 0, 0, HEART_ICON_TEX_DIMENSIONS.x, HEART_ICON_TEX_DIMENSIONS.y, HEART_ICON_TEX_DIMENSIONS.x, HEART_ICON_TEX_DIMENSIONS.y);
+
+        String lives = "?";
+        PlayerEntity p = map.get(profile.getName());
+        if (p != null) {
+            LivesComponent comp = MyComponents.LIVES_KEY.get(p);
+            if (comp != null) {
+                int l = comp.getLives();
+                lives = String.valueOf(l);
+            }
+        }
+
+        int healthColor = 0xDC143C; // Crimson red
+        String heartSymbol = "\u2764";
+        String livesText = lives + heartSymbol;
+        int realTextWidth = this.client().textRenderer.getWidth(livesText);
+        rightX -= realTextWidth - livesMarginSize;
+        drawScaledText(ctx, this.client().textRenderer, livesText, rightX, y, entryWidth / 6, entryHeight, healthColor);
+        //ctx.drawText(this.client().textRenderer, livesText, rightX, y, healthColor, true);
     }
 
-    private void drawText(DrawContext context, TextRenderer renderer, String text, int x, int y, int height, int color) {
-        //float scaleFactor = (float) height / 8;
-        float scaleFactor = (0.025f) / (8.0f / getHeight());
+    private static void drawPingBars(DrawContext ctx, int x, int y, int width, int height, int latency) {
+        // Use a modern, more compact style with a descriptive variable name.
+        int pingBarIndex = latency < 0 ? 5 :
+                           latency < 150 ? 0 :
+                           latency < 300 ? 1 :
+                           latency < 600 ? 2 :
+                           latency < 1000 ? 3 : 4;
+
+		ctx.getMatrices().push();
+        float scaleX = (float) width / 10;
+        float scaleY = (float) height / 8;
+        ctx.getMatrices().scale(scaleX, scaleY, 1.0f);
+		ctx.getMatrices().translate(x / scaleX, y / scaleY, 100.0F);
+        ctx.drawTexture(ICONS_TEXTURE, 0, 0, 0, 176 + pingBarIndex * 8, 10, 8);
+		ctx.getMatrices().pop();
+    }
+
+    private void drawScaledText(DrawContext context, TextRenderer renderer, String text, 
+                            int x, int y, int maxWidth, int maxHeight, int color) {
+        int textWidth = renderer.getWidth(text);
+        int textHeight = 8; // Vanilla text height
+        
+        float scaleX = (float) maxWidth / textWidth;
+        float scaleY = (float) maxHeight / textHeight;
+        float scale = Math.min(scaleX, scaleY); // Keep proportions
+        
         context.getMatrices().push();
-        context.getMatrices().scale(scaleFactor, scaleFactor, scaleFactor);
-        context.drawText(renderer, text, (int)(x / scaleFactor), (int)(y / scaleFactor), color, true);
-       // context.drawText(renderer, text, x, y, color, true);
+        context.getMatrices().scale(scale, scale, 1.0f);
+        context.getMatrices().translate(x / scale, y / scale, 0);
+        
+        renderer.draw(text, 0, 0, color, true, context.getMatrices().peek().getPositionMatrix(), 
+                    context.getVertexConsumers(), TextRenderer.TextLayerType.NORMAL, 0, 15728880);
+        
         context.getMatrices().pop();
     }
 
 
-    private static HashMap<String, PlayerEntity> getStringToPlayerMap() {
-        HashMap<String, PlayerEntity> map = new HashMap<>();
-        List<AbstractClientPlayerEntity> players = SoftHardcoreClient.getClient().world.getPlayers();
-        for (PlayerEntity p : players) {
-            map.put(p.getName().getString(), p);
+    private static Map<String, PlayerEntity> buildPlayerMap() {
+        Map<String, PlayerEntity> map = new HashMap<>();
+        ClientWorld w = SoftHardcoreClient.getClient().world;
+        if (w != null) {
+            for (AbstractClientPlayerEntity p : w.getPlayers()) map.put(p.getName().getString(), p);
         }
         return map;
     }
 
-//    // Modify the method that renders the player name tag
-//    @Inject(method = "render", at = @At("HEAD"))
-//    private void renderNameTagWithTexture(DrawContext context, int scaledWindowWidth, Scoreboard scoreboard, ScoreboardObjective objective, CallbackInfo ci) {
-////        PlayerListHud THIS = (PlayerListHud) (Object) this;
-//        List<PlayerListEntry> list = this.collectPlayerEntries();
-//        int i = 0;
-//        int j = 0;
-//
-//        for (PlayerListEntry playerListEntry : list) {
-//            int k = this.client().textRenderer.getWidth(this.getPlayerName(playerListEntry));
-//            i = Math.max(i, k);
-//            if (objective != null && objective.getRenderType() != ScoreboardCriterion.RenderType.HEARTS) {
-//                k = this.client().textRenderer.getWidth(" " + scoreboard.getPlayerScore(playerListEntry.getProfile().getName(), objective).getScore());
-//                j = Math.max(j, k);
-//            }
-//        }
-//
-//
-//        int l = list.size();
-//        int m = l;
-//
-//        int k;
-//        for (k = 1; m > 20; m = (l + k - 1) / k) {
-//            k++;
-//        }
-//
-//        boolean bl = this.client().isInSingleplayer() || this.client().getNetworkHandler().getConnection().isEncrypted();
-//        int n;
-//        if (objective != null) {
-//            if (objective.getRenderType() == ScoreboardCriterion.RenderType.HEARTS) {
-//                n = 90;
-//            } else {
-//                n = j;
-//            }
-//        } else {
-//            n = 0;
-//        }
-//
-//        int o = Math.min(k * ((bl ? 9 : 0) + i + n + 13), scaledWindowWidth - 50) / k;
-//        int p = scaledWindowWidth / 2 - (o * k + (k - 1) * 5) / 2;
-//        int q = 10;
-//        List<OrderedText> list2 = null;
-//        if (this.header() != null) {
-//            list2 = this.client().textRenderer.wrapLines(this.header(), scaledWindowWidth - 50);
-//
-//
-//        }
-//
-//
-//        if (list2 != null) {
-//
-//            for (OrderedText orderedText2 : list2) {
-//                q += 9;
-//            }
-//
-//            q++;
-//        }
-//
-//
-//        Identifier HEART_TEXTURE = new Identifier(SoftHardcore.MOD_ID, "textures/life_heart.png");
-//        for (int u = 0; u < l; u++) {
-//            int s = u / m;
-//            int v = u % m;
-//            int w = p + s * o + s * 5;
-//            int x = q + v * 9;
-//            RenderSystem.enableBlend();
-//            // context.drawText(this.client().textRenderer, "Hello, world! " + lives, 10, 50, 0xFFFFFFFF, true);
-//            context.drawTexture(HEART_TEXTURE, w - 10, q - 1, 10, 1 + m * 9, 0, 0, 6000, 5300, 6000, 5300);
-//            context.fill(w - 20, q - 1, w - 2, q + m * 9, Integer.MIN_VALUE);
-//        }
-//    }
-
-
-    //PlayerEntity player = playerListEntry2.
-    //  LivesComponent component = MyComponents.LIVES_KEY.get(this.client.player);
-    // int lives = component.getLives();
-
-    //  context.fill(w-10, x, w - 2, x, 0xFFFFFFFF);
-    //  context.drawTexture(HEART_TEXTURE, 10, 10, 0, 0, 40, 40, 308, 106);
-//        // context.drawText(client.textRenderer, "Hello, world! " + lives, 10, 50, 0xFFFFFFFF, true);
-//        for(int u = 0; u < l; ++u) {
-//            int s = u / m;
-//            v = u % m;
-//            int w = p + s * o + s * 5;
-//            int x = q + v * 9;
-//            context.fill(w-10, x, w - 2, x, 0xFFFFFFFF);
-////            context.fill(w, x, w + o, x + 8, t);
-////            RenderSystem.enableBlend();
-////            if (u < list.size()) {
-////                PlayerListEntry playerListEntry2 = (PlayerListEntry)list.get(u);
-////                GameProfile gameProfile = playerListEntry2.getProfile();
-////                if (bl) {
-////                    PlayerEntity playerEntity = this.client.world.getPlayerByUuid(gameProfile.getId());
-////                    boolean bl2 = playerEntity != null && LivingEntityRenderer.shouldFlipUpsideDown(playerEntity);
-////                    boolean bl3 = playerEntity != null && playerEntity.isPartVisible(PlayerModelPart.HAT);
-////                    PlayerSkinDrawer.draw(context, playerListEntry2.getSkinTexture(), w, x, 8, bl3, bl2);
-////                    w += 9;
-////                }
-////
-////                context.drawTextWithShadow(this.client.textRenderer, this.getPlayerName(playerListEntry2), w, x, playerListEntry2.getGameMode() == GameMode.SPECTATOR ? -1862270977 : -1);
-////                if (objective != null && playerListEntry2.getGameMode() != GameMode.SPECTATOR) {
-////                    int y = w + i + 1;
-////                    int z = y + n;
-////                    if (z - y > 5) {
-////                        this.renderScoreboardObjective(objective, x, gameProfile.getName(), y, z, gameProfile.getId(), context);
-////                    }
-////                }
-////
-////                this.renderLatencyIcon(context, o, w - (bl ? 9 : 0), x, playerListEntry2);
-//        }
-
+    private static void setShaderColor(int color) {
+        float r = ((color >> 16) & 0xFF) / 255.0f;
+        float g = ((color >> 8) & 0xFF) / 255.0f;
+        float b = (color & 0xFF) / 255.0f;
+        RenderSystem.setShaderColor(r, g, b, 1.0f);
+    }
 }
