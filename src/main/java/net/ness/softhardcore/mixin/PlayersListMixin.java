@@ -109,7 +109,7 @@ public abstract class PlayersListMixin {
     }
 
     private static int livesMargin(ScalingSystem.ContainerDimensions parent) { 
-        return ScalingSystem.widthPercent(parent, 0.025f); 
+        return ScalingSystem.widthPercent(parent, 0.010f); 
     }
     
 
@@ -150,7 +150,7 @@ public abstract class PlayersListMixin {
         int entryY = topMarginY + topBackgroundMarginY;
 
         int leftX = entryX;
-        int rightX = centerX + innerWidth / 2;
+        int rightX = entryX + numColumns * entryWidth + (numColumns - 1) * gapX;
         int topY = topMarginY;
         int bottomY = topY + topBackgroundMarginY + innerHeight + bottomBackgroundMarginY;
 
@@ -213,15 +213,11 @@ public abstract class PlayersListMixin {
         x += iconSize + nameTagMarginSize;
         RenderSystem.setShaderColor(1,1,1,1);
 
-        //ctx.drawText(this.client().textRenderer, profile.getName(), x, y, color, true);
-        drawScaledText(ctx, this.client().textRenderer, profile.getName(), x, y, entryWidth / 2, entryHeight, color);
+        drawScaledText(ctx, this.client().textRenderer, profile.getName(), x, y, entryHeight, color);
         
         // Since we don't know the width of the text, we need to calculate the rightX
         int rightX = leftX + entryWidth - pingWidthSize - pingMarginSize;
         drawPingBars(ctx, rightX, y, pingWidthSize, pingHeightSize, entry.getLatency());
-        
-        // ctx.drawText(this.client().textRenderer, heartSymbol, rightX, y, Colors.WHITE, true);
-        // ctx.drawTexture(HEART_ICON, rightX, y, iconSize, iconSize, 0, 0, HEART_ICON_TEX_DIMENSIONS.x, HEART_ICON_TEX_DIMENSIONS.y, HEART_ICON_TEX_DIMENSIONS.x, HEART_ICON_TEX_DIMENSIONS.y);
 
         String lives = "?";
         PlayerEntity p = map.get(profile.getName());
@@ -236,10 +232,13 @@ public abstract class PlayersListMixin {
         int healthColor = 0xDC143C; // Crimson red
         String heartSymbol = "\u2764";
         String livesText = lives + heartSymbol;
-        int realTextWidth = this.client().textRenderer.getWidth(livesText);
-        rightX -= realTextWidth - livesMarginSize;
-        drawScaledText(ctx, this.client().textRenderer, livesText, rightX, y, entryWidth / 6, entryHeight, healthColor);
-        //ctx.drawText(this.client().textRenderer, livesText, rightX, y, healthColor, true);
+        
+        // Calculate the width of the text
+        float scaleY = (float) entryHeight / 8;
+        float realTextWidth = this.client().textRenderer.getWidth(livesText) * scaleY;
+        rightX -= realTextWidth + livesMarginSize;
+        
+        drawScaledText(ctx, this.client().textRenderer, livesText, rightX, y, entryHeight, healthColor);
     }
 
     private static void drawPingBars(DrawContext ctx, int x, int y, int width, int height, int latency) {
@@ -260,13 +259,11 @@ public abstract class PlayersListMixin {
     }
 
     private void drawScaledText(DrawContext context, TextRenderer renderer, String text, 
-                            int x, int y, int maxWidth, int maxHeight, int color) {
-        int textWidth = renderer.getWidth(text);
+                            int x, int y, int maxHeight, int color) {
+
         int textHeight = 8; // Vanilla text height
-        
-        float scaleX = (float) maxWidth / textWidth;
         float scaleY = (float) maxHeight / textHeight;
-        float scale = Math.min(scaleX, scaleY); // Keep proportions
+        float scale = scaleY; // Keep proportions
         
         context.getMatrices().push();
         context.getMatrices().scale(scale, scale, 1.0f);
