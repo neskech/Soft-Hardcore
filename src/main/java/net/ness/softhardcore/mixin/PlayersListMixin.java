@@ -38,7 +38,7 @@ import java.util.concurrent.ConcurrentHashMap;
 @Mixin(PlayerListHud.class)
 public abstract class PlayersListMixin {
 
-    private static final int MAX_ROWS = 5;
+    private static final int MAX_ROWS = 2;
     
     private static final int BACKGROUND_COLOR = 0x80000000;      // 50% black
     private static final int PLAYER_ENTRY_BACKGROUND_COLOR = 0x40FFFFFF; // 25% white tint overlay
@@ -81,8 +81,20 @@ public abstract class PlayersListMixin {
         return ScalingSystem.heightPercent(parent, 0.06f); 
     }
     
+    private static int textUpperMarginY(ScalingSystem.ContainerDimensions parent) { 
+        return ScalingSystem.heightPercent(parent, 0.04f); 
+    }
+
+    private static int textLowerMarginY(ScalingSystem.ContainerDimensions parent) { 
+        return ScalingSystem.heightPercent(parent, 0.10f); 
+    }
+    
     private static int hudMarginTopY(ScalingSystem.ContainerDimensions parent) { 
-        return ScalingSystem.heightPercent(parent, 0.01f); 
+        return ScalingSystem.heightPercent(parent, 0.02f); 
+    }
+
+    private static int hudSideMargins(ScalingSystem.ContainerDimensions parent) { 
+        return ScalingSystem.widthPercent(parent, 0.02f); 
     }
     
     private static int nameTagMargin(ScalingSystem.ContainerDimensions parent) { 
@@ -146,24 +158,25 @@ public abstract class PlayersListMixin {
         int centerX = scaledWindowWidth / 2;
         int entryX = centerX - innerWidth / 2;
         int topMarginY = hudMarginTopY(screenContainer);
-        int topBackgroundMarginY = hudBackgroundTopMarginY(screenContainer);
+        //int topBackgroundMarginY = hudBackgroundTopMarginY(screenContainer);
         int bottomBackgroundMarginY = hudBackgroundBottomMarginY(screenContainer);
-        int entryY = topMarginY + topBackgroundMarginY;
+        int entryY = topMarginY + textUpperMarginY(screenContainer) + textLowerMarginY(screenContainer);
 
-        int leftX = entryX;
-        int rightX = entryX + numColumns * entryWidth + (numColumns - 1) * gapX;
+        int leftX = entryX - hudSideMargins(screenContainer);
+        int rightX = entryX + numColumns * entryWidth + (numColumns - 1) * gapX + hudSideMargins(screenContainer);
         int topY = topMarginY;
-        int bottomY = topY + topBackgroundMarginY + innerHeight + bottomBackgroundMarginY;
+        int bottomY = topY + innerHeight + bottomBackgroundMarginY + textLowerMarginY(screenContainer) + textUpperMarginY(screenContainer);
 
         RenderSystem.enableBlend();
         context.fill(leftX, topY, rightX, bottomY, BACKGROUND_COLOR);
 
-        // TextRenderer tr = this.client().textRenderer;
-        // String title = "THE REALM";
-        // drawCenteredText(context, tr, title, screenContainer.width / 2, topY + 10, 0xFF0000);
+        TextRenderer tr = this.client().textRenderer;
+        String title = "§l" + getServerName();
+        int healthColor = 0xDC143C; // Crimson red
+        drawCenteredText(context, tr, title, screenContainer.width / 2, topY + textUpperMarginY(screenContainer), healthColor);
 
-        // String count = numPlayers + " Players";
-        // drawCenteredText(context, tr, count, screenContainer.width / 2, topY + 25, Colors.WHITE);
+        String count = numPlayers == 1 ? numPlayers + " Player" : numPlayers + " Players";
+        drawCenteredText(context, tr, count, screenContainer.width / 2, topY + textUpperMarginY(screenContainer) + 10, 0xFFFFFF);
 
         Map<String, PlayerEntity> playerMap = buildPlayerMap();
 
@@ -314,19 +327,27 @@ public abstract class PlayersListMixin {
         RenderSystem.setShaderColor(r, g, b, 1.0f);
     }
     
-    /**
-     * Updates the lives cache for a player. This should be called when a player's lives change
-     * or when they die, to ensure the cache stays up to date.
-     */
-    private static void updateLivesCache(UUID playerUuid, int lives) {
-        livesCache.put(playerUuid, lives);
+    private static void drawCenteredText(DrawContext context, TextRenderer renderer, String text, int x, int y, int color) {
+        int textWidth = renderer.getWidth(text);
+        renderer.draw(text, x - textWidth / 2, y, color, true, context.getMatrices().peek().getPositionMatrix(), 
+                    context.getVertexConsumers(), TextRenderer.TextLayerType.NORMAL, 0, 15728880);
     }
     
     /**
-     * Clears the lives cache. This can be called when disconnecting from a server
-     * to prevent stale data.
+     * Gets the current server name, or falls back to a default if not connected to a server.
      */
-    private static void clearLivesCache() {
-        livesCache.clear();
+    private static String getServerName() {
+        MinecraftClient client = SoftHardcoreClient.getClient();
+        if (client != null && client.getCurrentServerEntry() != null) {
+            // Get the server name that the client has stored
+            return client.getCurrentServerEntry().name;
+        } else if (client != null && client.world != null) {
+            // If we're in a world but not connected to a server (singleplayer), use world name
+            return "Singleplayer World";
+        } else {
+            // Fallback if no server or world
+            return "THE REALM";
+        }
     }
+
 }
