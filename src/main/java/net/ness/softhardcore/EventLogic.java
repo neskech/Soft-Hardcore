@@ -127,15 +127,29 @@ public class EventLogic {
         ServerPlayerEntity player = handler.getPlayer();
         LivesComponent component = MyComponents.LIVES_KEY.get(player);
 
-        // If the player has 0 lives but isn't banned,
-        // Then their ban must have expired. Let them
-        // back onto the server!
+        // If the player has 0 lives, check if their ban has expired
         if (component.getLives() <= 0) {
+            long currentTime = System.currentTimeMillis();
+            long lastLifeLostTime = component.getLastLifeLostTime();
+            long banDurationMillis = MyConfig.BAN_DURATION.toMillis();
+            long timeSinceLifeLost = currentTime - lastLifeLostTime;
+            
+            // If the ban hasn't expired yet, kick them
+            if (timeSinceLifeLost < banDurationMillis) {
+                long remainingSeconds = (banDurationMillis - timeSinceLifeLost) / 1000;
+                String kickMessage = "You ran out of lives! You can rejoin in " + remainingSeconds + " seconds.";
+                player.networkHandler.disconnect(Text.literal(kickMessage));
+                return;
+            }
+            
+            // Ban has expired, restore their lives
+            // Clear any pending ban flag that might be stuck
+            component.setPendingBan(false);
+            
             Text message = Text.literal("Welcome back! Your lives have been refilled.").formatted(Formatting.GREEN);
             player.sendMessage(message);
             component.setLives(MyConfig.RETURNING_LIVES);
             // Set both timestamps to current time so they don't immediately regenerate
-            long currentTime = System.currentTimeMillis();
             component.setLastLifeRegenTime(currentTime);
             component.setLastLifeLostTime(currentTime);
             
@@ -176,60 +190,34 @@ public class EventLogic {
                 return;
             }
 
-            PlayerManager playerManager = server.getPlayerManager();
-            String banReason = "You ran out of lives!";
-
+            // Store the ban time in the component instead of using Minecraft's ban system
+            component.setLastLifeLostTime(System.currentTimeMillis());
+            
             // Calculate when the ban will expire
-            Instant thisInstant = (new Date()).toInstant();
-            Instant future = thisInstant.plus(MyConfig.BAN_DURATION);
-            Date banExpiration = Date.from(future);
-
-            // Add the player to the ban list
-            playerManager.getUserBanList().add(
-                    new net.minecraft.server.BannedPlayerEntry(
-                            newPlayer.getGameProfile(),
-                            new Date(),
-                            "Admin",
-                            banExpiration,
-                            banReason
-                    )
-            );
-
-            // Kick the player from the server
-            newPlayer.networkHandler.disconnect(Text.literal("You are banned: " + banReason));
+            long banDurationMillis = MyConfig.BAN_DURATION.toMillis();
+            long banExpiresAt = System.currentTimeMillis() + banDurationMillis;
+            
+            // Kick the player from the server with a message
+            String banMessage = "You ran out of lives! You can rejoin in " + (banDurationMillis / 1000) + " seconds.";
+            newPlayer.networkHandler.disconnect(Text.literal(banMessage));
         }
     }
 
     /**
-     * Handles disconnect events - bans players who disconnect with pending bans
+     * Handles disconnect events - stores the ban time for players who disconnect with pending bans
      */
     private static void disconnectEventLogic(ServerPlayNetworkHandler handler, MinecraftServer server) {
         ServerPlayerEntity player = handler.getPlayer();
         LivesComponent component = MyComponents.LIVES_KEY.get(player);
         
         if (component.isPendingBan()) {
-            // Player disconnected with a pending ban, ban them immediately
-            PlayerManager playerManager = server.getPlayerManager();
-            String banReason = "You ran out of lives!";
-
-            // Calculate when the ban will expire
-            Instant thisInstant = (new Date()).toInstant();
-            Instant future = thisInstant.plus(MyConfig.BAN_DURATION);
-            Date banExpiration = Date.from(future);
-
-            // Add the player to the ban list
-            playerManager.getUserBanList().add(
-                    new net.minecraft.server.BannedPlayerEntry(
-                            player.getGameProfile(),
-                            new Date(),
-                            "Admin",
-                            banExpiration,
-                            banReason
-                    )
-            );
+            // Player disconnected with a pending ban, store the time they lost their life
+            component.setLastLifeLostTime(System.currentTimeMillis());
             
             // Clear the pending ban flag
             component.setPendingBan(false);
+            
+            server.sendMessage(Text.literal("Player " + player.getName() + " disconnected with pending ban"));
         }
     }
 
