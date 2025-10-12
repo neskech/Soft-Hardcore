@@ -2,12 +2,12 @@
 	"required": true,
 	"package": "net.ness.softhardcore.mixin",
 	"compatibilityLevel": "JAVA_17",
-	"mixins": [
-		"ExampleMixin",
-		"PlayerDeathMixin",
-		"PlayersListMixin",
-		"NametagMixin"
-	],
+  "mixins": [
+    "ExampleMixin",
+    "PlayerDeathMixin",
+    "PlayersListMixin",
+    "NametagMixin"
+  ],
 	"injectors": {
 		"defaultRequire": 1
 	}

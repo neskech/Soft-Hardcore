@@ -18,6 +18,7 @@ import net.ness.softhardcore.component.MyComponents;
 import net.ness.softhardcore.config.HeartDropMode;
 import net.ness.softhardcore.config.MyConfig;
 import net.ness.softhardcore.event.PlayerDeathCallback;
+import net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents;
 import net.ness.softhardcore.util.LivesCacheManager;
 
 import java.time.Instant;
@@ -26,10 +27,11 @@ import java.util.Date;
 public class EventLogic {
 
     public static void registerEventLogic() {
-        //TODO: Change to after respawn and maybe put a hud message too
         PlayerDeathCallback.EVENT.register((player, damageSource) -> lifeDecrementLogic(player, damageSource));
         PlayerDeathCallback.EVENT.register((player, damageSource) -> lifeDropLogic(player, damageSource));
+        ServerPlayerEvents.AFTER_RESPAWN.register(EventLogic::respawnEventLogic);
         ServerPlayConnectionEvents.JOIN.register(EventLogic::loginEventLogic);
+        ServerPlayConnectionEvents.DISCONNECT.register(EventLogic::disconnectEventLogic);
     }
 
     private static ActionResult lifeDecrementLogic(ServerPlayerEntity player, DamageSource damageSource) {
@@ -40,45 +42,19 @@ public class EventLogic {
         // Update the lives cache for the scoreboard
         LivesCacheManager.updateLivesCache(player.getUuid(), component.getLives());
 
-        // Only ban if the player's run out of lives
+        // Only set pending ban if the player's run out of lives
         if (component.getLives() > 0) {
             Text message = Text.literal("You've just lost a life...").formatted(Formatting.RED);
             player.sendMessage(message);
             return ActionResult.PASS;
         }
 
+        // Set pending ban instead of immediately banning
+        component.setPendingBan(true);
+        Text message = Text.literal("You've run out of lives! You will be banned when you respawn.").formatted(Formatting.RED);
+        player.sendMessage(message);
 
-        MinecraftServer server = player.getServer();
-        if (server == null) {
-            Text message = Text.literal("ERROR: Player ran out of lives, but server is null").formatted(Formatting.RED);
-            player.sendMessage(message);
-            return ActionResult.PASS;
-        }
-
-        PlayerManager playerManager = server.getPlayerManager();
-        String banReason = "You ran out of lives!";
-
-        // Calculate when the ban will expire
-        Instant thisInstant = (new Date()).toInstant();
-        Instant future = thisInstant.plus(MyConfig.BAN_DURATION);
-        Date banExpiration = Date.from(future);
-
-        // Add the player to the ban list
-        playerManager.getUserBanList().add(
-                new net.minecraft.server.BannedPlayerEntry(
-                        player.getGameProfile(),
-                        new Date(),
-                        "Admin",
-                        banExpiration,
-                        banReason
-                )
-        );
-
-        // Kick the player from the server
-        player.networkHandler.disconnect(Text.literal("You are banned: " + banReason));
-
-        // Prevent further events from being called here
-        return ActionResult.FAIL;
+        return ActionResult.PASS;
     }
 
     private static ActionResult lifeDropLogic(ServerPlayerEntity player, DamageSource damageSource) {
@@ -179,6 +155,81 @@ public class EventLogic {
             
             // Update the lives cache for the scoreboard
             LivesCacheManager.updateLivesCache(player.getUuid(), component.getLives());
+        }
+    }
+
+    /**
+     * Handles respawn events - bans players who have pending bans
+     */
+    private static void respawnEventLogic(ServerPlayerEntity oldPlayer, ServerPlayerEntity newPlayer, boolean alive) {
+        LivesComponent component = MyComponents.LIVES_KEY.get(newPlayer);
+        
+        if (component.isPendingBan()) {
+            // Clear the pending ban flag
+            component.setPendingBan(false);
+            
+            // Now ban the player
+            MinecraftServer server = newPlayer.getServer();
+            if (server == null) {
+                Text message = Text.literal("ERROR: Player has pending ban, but server is null").formatted(Formatting.RED);
+                newPlayer.sendMessage(message);
+                return;
+            }
+
+            PlayerManager playerManager = server.getPlayerManager();
+            String banReason = "You ran out of lives!";
+
+            // Calculate when the ban will expire
+            Instant thisInstant = (new Date()).toInstant();
+            Instant future = thisInstant.plus(MyConfig.BAN_DURATION);
+            Date banExpiration = Date.from(future);
+
+            // Add the player to the ban list
+            playerManager.getUserBanList().add(
+                    new net.minecraft.server.BannedPlayerEntry(
+                            newPlayer.getGameProfile(),
+                            new Date(),
+                            "Admin",
+                            banExpiration,
+                            banReason
+                    )
+            );
+
+            // Kick the player from the server
+            newPlayer.networkHandler.disconnect(Text.literal("You are banned: " + banReason));
+        }
+    }
+
+    /**
+     * Handles disconnect events - bans players who disconnect with pending bans
+     */
+    private static void disconnectEventLogic(ServerPlayNetworkHandler handler, MinecraftServer server) {
+        ServerPlayerEntity player = handler.getPlayer();
+        LivesComponent component = MyComponents.LIVES_KEY.get(player);
+        
+        if (component.isPendingBan()) {
+            // Player disconnected with a pending ban, ban them immediately
+            PlayerManager playerManager = server.getPlayerManager();
+            String banReason = "You ran out of lives!";
+
+            // Calculate when the ban will expire
+            Instant thisInstant = (new Date()).toInstant();
+            Instant future = thisInstant.plus(MyConfig.BAN_DURATION);
+            Date banExpiration = Date.from(future);
+
+            // Add the player to the ban list
+            playerManager.getUserBanList().add(
+                    new net.minecraft.server.BannedPlayerEntry(
+                            player.getGameProfile(),
+                            new Date(),
+                            "Admin",
+                            banExpiration,
+                            banReason
+                    )
+            );
+            
+            // Clear the pending ban flag
+            component.setPendingBan(false);
         }
     }
 

@@ -11,6 +11,7 @@ public class LivesComponent implements AutoSyncedComponent {
     private int lives = MyConfig.DEFAULT_LIVES;
     private long lastLifeLostTime = 0;
     private long lastLifeRegenTime = 0;
+    private boolean pendingBan = false;
 
     LivesComponent(PlayerEntity provider) {
         this.provider = provider;
@@ -53,6 +54,15 @@ public class LivesComponent implements AutoSyncedComponent {
         MyComponents.LIVES_KEY.sync(this.provider);
     }
 
+    public boolean isPendingBan() {
+        return this.pendingBan;
+    }
+
+    public void setPendingBan(boolean pendingBan) {
+        this.pendingBan = pendingBan;
+        MyComponents.LIVES_KEY.sync(this.provider);
+    }
+
     public boolean canRegenerateLife() {
         if (this.lives >= MyConfig.DEFAULT_LIVES) {
             return false; // Already at max lives
@@ -88,6 +98,7 @@ public class LivesComponent implements AutoSyncedComponent {
         this.lives = nbtCompound.getInt("lives");
         this.lastLifeLostTime = nbtCompound.getLong("lastLifeLostTime");
         this.lastLifeRegenTime = nbtCompound.getLong("lastLifeRegenTime");
+        this.pendingBan = nbtCompound.getBoolean("pendingBan");
     }
 
     @Override
@@ -95,5 +106,6 @@ public class LivesComponent implements AutoSyncedComponent {
         nbtCompound.putInt("lives", this.lives);
         nbtCompound.putLong("lastLifeLostTime", this.lastLifeLostTime);
         nbtCompound.putLong("lastLifeRegenTime", this.lastLifeRegenTime);
+        nbtCompound.putBoolean("pendingBan", this.pendingBan);
     }
 }
