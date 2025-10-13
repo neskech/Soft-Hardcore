@@ -42,14 +42,29 @@ The mod creates a configuration file at `config/softhardcoreconfig.properties` w
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `default.lives` | Integer | `2` | Number of lives each player starts with |
-| `ban.duration` | Duration | `PT6S` | How long players are banned when they run out of lives (ISO-8601 format) |
+| `default.lives` | Integer | `15` | Number of lives each player starts with |
+| `ban.duration` | Duration | `PT48H` | How long players are banned when they run out of lives (ISO-8601 format) |
 | `lives.dropped.on.death` | Integer | `1` | Number of life hearts dropped when a player dies |
 | `heart.drop.mode` | String | `NEUTRAL` | When life hearts are dropped (see [Heart Drop Modes](#heart-drop-modes)) |
 | `life.regen.cooldown` | Duration | `PT24H` | Time between automatic life regeneration (ISO-8601 format) |
-| `returning.lives` | Integer | `1` | Number of lives given to players when their ban expires |
+| `returning.lives` | Integer | `5` | Number of lives given to players when their ban expires |
 | `lives.gained.from.heart` | Integer | `1` | Number of lives gained when consuming a life heart |
 | `scoreboard.max.rows` | Integer | `5` | Maximum number of players shown on the lives scoreboard (1-20) |
+| `passive.death.heart.drop.probability` | Double | `1.0` | Probability of dropping hearts on natural deaths (0.0-1.0) |
+| `player.death.heart.drop.probability` | Double | `1.0` | Probability of dropping hearts on player kills (0.0-1.0) |
+
+### Probability System
+
+The mod includes a probability system for heart drops that works alongside the heart drop modes:
+
+- **`passive.death.heart.drop.probability`**: Controls the chance of dropping hearts on natural deaths (mobs, environment, etc.)
+- **`player.death.heart.drop.probability`**: Controls the chance of dropping hearts on player kills
+- **Values**: Range from 0.0 (never drop) to 1.0 (always drop)
+- **Mode Override**: If a heart drop mode (like NEVER) disables drops, probabilities are ignored
+- **Examples**: 
+  - `0.5` = 50% chance of dropping hearts
+  - `0.25` = 25% chance of dropping hearts
+  - `1.0` = 100% chance (always drop, default behavior)
 
 ### Duration Format Examples
 
@@ -90,6 +105,10 @@ lives.gained.from.heart=2
 
 # Show up to 10 players on the scoreboard
 scoreboard.max.rows=10
+
+# Heart drop probabilities (0.0 = never, 1.0 = always)
+passive.death.heart.drop.probability=0.8
+player.death.heart.drop.probability=1.0
 ```
 
 ## 🎮 Commands
@@ -166,6 +185,11 @@ The mod supports different modes for when life hearts are dropped:
 - **Description**: Drop hearts ONLY when killed by different team players
 - **Use Case**: Competitive team-based gameplay
 - **Example**: Only enemy team kills drop hearts, natural deaths don't
+
+### VENGEFUL
+- **Description**: Drop hearts ONLY when killed by another player (any player, regardless of team)
+- **Use Case**: PvP-focused gameplay where only player kills matter
+- **Example**: Any player kill drops hearts, natural deaths don't (team doesn't matter)
 
 ### NEVER
 - **Description**: Never drop hearts

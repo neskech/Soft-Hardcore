@@ -65,39 +65,64 @@ public class EventLogic {
 
     private static boolean shouldDropHearts(ServerPlayerEntity player, DamageSource damageSource) {
         HeartDropMode mode = MyConfig.HEART_DROP_MODE;
+        boolean isPlayerKill = damageSource.getAttacker() instanceof ServerPlayerEntity;
+        
+        // If mode is NEVER, never drop hearts regardless of probabilities
+        if (mode == HeartDropMode.NEVER) {
+            return false;
+        }
+        
+        boolean shouldDrop = false;
         
         switch (mode) {
             case PASSIVE:
                 // Drop hearts only on natural deaths (not player kills)
-                return !(damageSource.getAttacker() instanceof ServerPlayerEntity);
+                shouldDrop = !isPlayerKill;
+                break;
                 
             case NEUTRAL:
                 // Drop hearts on any death
-                return true;
+                shouldDrop = true;
+                break;
                 
             case TEAM:
                 // Drop hearts on natural deaths + when killed by different team player
-                if (!(damageSource.getAttacker() instanceof ServerPlayerEntity)) {
-                    return true; // Natural death
+                if (!isPlayerKill) {
+                    shouldDrop = true; // Natural death
+                } else {
+                    ServerPlayerEntity attacker = (ServerPlayerEntity) damageSource.getAttacker();
+                    shouldDrop = !areOnSameTeam(player, attacker);
                 }
-                ServerPlayerEntity attacker = (ServerPlayerEntity) damageSource.getAttacker();
-                return !areOnSameTeam(player, attacker);
+                break;
                 
             case COMPETITIVE:
                 // Drop hearts ONLY when killed by different team player
-                if (!(damageSource.getAttacker() instanceof ServerPlayerEntity)) {
-                    return false; // Natural death - no hearts dropped
+                if (!isPlayerKill) {
+                    shouldDrop = false; // Natural death - no hearts dropped
+                } else {
+                    ServerPlayerEntity competitiveAttacker = (ServerPlayerEntity) damageSource.getAttacker();
+                    shouldDrop = !areOnSameTeam(player, competitiveAttacker);
                 }
-                ServerPlayerEntity competitiveAttacker = (ServerPlayerEntity) damageSource.getAttacker();
-                return !areOnSameTeam(player, competitiveAttacker);
+                break;
                 
-            case NEVER:
-                // Never drop hearts
-                return false;
+            case VENGEFUL:
+                // Drop hearts ONLY when killed by another player (any player, regardless of team)
+                shouldDrop = isPlayerKill;
+                break;
                 
             default:
-                return true; // Default to dropping hearts
+                shouldDrop = true; // Default to dropping hearts
         }
+        
+        // If we should drop hearts based on mode, apply probability
+        if (shouldDrop) {
+            double probability = isPlayerKill ? 
+                MyConfig.PLAYER_DEATH_HEART_DROP_PROBABILITY : 
+                MyConfig.PASSIVE_DEATH_HEART_DROP_PROBABILITY;
+            return Math.random() < probability;
+        }
+        
+        return false;
     }
 
     private static boolean areOnSameTeam(ServerPlayerEntity player1, ServerPlayerEntity player2) {
