@@ -2,17 +2,6 @@
 
 A soft-hardcore, highly configurable Minecraft mod that gives each player a limited number of lives. Once players run out of lives, they are temporarily banned for a configurable amount of time. Players can drop life hearts to give other players back lives, creating a cooperative survival experience.
 
-## 📋 Table of Contents
-
-- [Features](#features)
-- [Installation](#installation)
-- [Configuration](#configuration)
-- [Commands](#commands)
-- [Gameplay Mechanics](#gameplay-mechanics)
-- [Heart Drop Modes](#heart-drop-modes)
-- [Troubleshooting](#troubleshooting)
-- [Contributing](#contributing)
-- [License](#license)
 
 ## ✨ Features
 
