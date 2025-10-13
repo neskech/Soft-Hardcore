@@ -4,6 +4,7 @@ import dev.onyxstudios.cca.api.v3.component.sync.AutoSyncedComponent;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.server.network.ServerPlayerEntity;
+import net.ness.softhardcore.SoftHardcore;
 import net.ness.softhardcore.config.MyConfig;
 import net.ness.softhardcore.util.LivesCacheManager;
 
@@ -23,17 +24,27 @@ public class LivesComponent implements AutoSyncedComponent {
     }
 
     public void decrement() {
-        this.lives = Math.max(this.lives - 1, 0);
-        MyComponents.LIVES_KEY.sync(this.provider);
+        this.setLives(this.lives - 1);
     }
 
     public void increment() {
-        this.lives = Math.min(this.lives + 1, MyConfig.DEFAULT_LIVES);
-        MyComponents.LIVES_KEY.sync(this.provider);
+        this.setLives(this.lives + 1);
     }
 
     public void setLives(int lives) {
-        this.lives = Math.max(Math.min(lives, MyConfig.DEFAULT_LIVES), 0);
+        int previous = this.lives;
+        int clamped = Math.max(Math.min(lives, MyConfig.DEFAULT_LIVES), 0);
+        this.lives = clamped;
+        if (clamped < previous) {
+            // Lives decreased
+            this.lastLifeLostTime = System.currentTimeMillis();
+        } else if (clamped > previous) {
+            // Lives increased
+            this.lastLifeRegenTime = System.currentTimeMillis();
+        }
+        if (clamped == MyConfig.DEFAULT_LIVES) {
+            this.lastLifeRegenTime = 0;
+        }
         MyComponents.LIVES_KEY.sync(this.provider);
     }
 
@@ -41,17 +52,26 @@ public class LivesComponent implements AutoSyncedComponent {
         return this.lastLifeLostTime;
     }
 
-    public void setLastLifeLostTime(long timestamp) {
-        this.lastLifeLostTime = timestamp;
-        MyComponents.LIVES_KEY.sync(this.provider);
-    }
+    // Timestamp setters are intentionally internalized to avoid inconsistent state
 
     public long getLastLifeRegenTime() {
         return this.lastLifeRegenTime;
     }
 
-    public void setLastLifeRegenTime(long timestamp) {
-        this.lastLifeRegenTime = timestamp;
+    // Timestamp setters are intentionally internalized to avoid inconsistent state
+
+    /**
+     * Marks the start of a ban window by recording a life loss timestamp as now.
+     */
+    public void markBanStartNow() {
+        this.lastLifeLostTime = System.currentTimeMillis();
+        MyComponents.LIVES_KEY.sync(this.provider);
+    }
+
+    public void markBanEndNow() {
+        // To prevent immediate regeneration
+        this.lastLifeRegenTime = System.currentTimeMillis();
+        this.lastLifeLostTime = System.currentTimeMillis();
         MyComponents.LIVES_KEY.sync(this.provider);
     }
 
@@ -64,34 +84,32 @@ public class LivesComponent implements AutoSyncedComponent {
         MyComponents.LIVES_KEY.sync(this.provider);
     }
 
-    public boolean canRegenerateLife() {
-        if (this.lives >= MyConfig.DEFAULT_LIVES) {
-            return false; // Already at max lives
+    public int tryRegenerateLife() {
+        if (this.lives == MyConfig.DEFAULT_LIVES || this.pendingBan) {
+            return 0;
         }
-        
-        long currentTime = System.currentTimeMillis();
-        // Use default 24 hours if config not loaded yet
-        long cooldownMillis = MyConfig.LIFE_REGEN_COOLDOWN != null ? 
-            MyConfig.LIFE_REGEN_COOLDOWN.toMillis() : 24 * 60 * 60 * 1000L;
-        
-        // For new players who haven't died yet, allow regeneration immediately
-        if (this.lastLifeLostTime == 0) {
-            return true;
-        }
-        
-        // Check cooldown from when player last lost a life
-        long timeSinceLastDeath = currentTime - this.lastLifeLostTime;
-        return timeSinceLastDeath >= cooldownMillis;
-    }
 
-    public boolean regenerateLife() {
-        if (canRegenerateLife()) {
-            this.lives = Math.min(this.lives + 1, MyConfig.DEFAULT_LIVES);
-            this.lastLifeRegenTime = System.currentTimeMillis();
-            MyComponents.LIVES_KEY.sync(this.provider);
-            return true;
+        // Use default 24 hours if config not loaded yet
+        long currentTime = System.currentTimeMillis();
+        long defaultCooldownMillis = 24 * 60 * 60 * 1000L;
+        long cooldownMillis = MyConfig.LIFE_REGEN_COOLDOWN != null ? MyConfig.LIFE_REGEN_COOLDOWN.toMillis() : defaultCooldownMillis;
+        long anchorTime = this.lastLifeRegenTime > 0 ? this.lastLifeRegenTime : this.lastLifeLostTime;
+
+        // If anchor time is 0, then we don't have any history, which should never happen but we'll handle it anyway
+        int regenerationAmount = 1;
+        if (anchorTime > 0) {
+            long timeSinceLastAnchor = currentTime - anchorTime;
+            regenerationAmount = (int) (timeSinceLastAnchor / cooldownMillis);
+            SoftHardcore.LOGGER.info("Regeneration amount: " + regenerationAmount + " from " + anchorTime / 1000 + " to " + currentTime / 1000 + " for a difference of " + timeSinceLastAnchor / 1000 + " and cooldown of " + cooldownMillis / 1000);
+            regenerationAmount = Math.min(regenerationAmount, MyConfig.DEFAULT_LIVES - this.lives);
         }
-        return false;
+
+        if (regenerationAmount <= 0) {
+            return 0;
+        }
+
+        this.setLives(this.lives + regenerationAmount);
+        return regenerationAmount;
     }
 
     @Override

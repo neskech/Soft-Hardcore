@@ -11,41 +11,61 @@ The mod also provides some minor UI reworks, lives and armor information now app
 - **Temporary Bans**: Players are temporarily banned when they run out of lives
 - **Life Hearts**: Players can drop life hearts to restore lives to others
 - **Automatic Life Regeneration**: Lives can regenerate over time (configurable)
+- **Multiple Interval Regeneration**: If multiple cooldown periods pass, all pending regenerations are applied
 - **Team-Based Mechanics**: Support for team-based heart dropping
 - **Scoreboard Integration**: Lives are displayed on the player list
 - **HUD Overlay**: Shows remaining lives in-game
 - **Admin Commands**: Full administrative control over player lives
+- **Runtime Configuration**: Modify config values in-game with autocomplete
+- **Bulk Operations**: Set lives for all players (online and offline) at once
+- **Human-Readable Durations**: Ban messages show friendly time formats
 - **Highly Configurable**: Extensive configuration options for all aspects
 
-## 🚀 Installation
+## 🆕 Recent Improvements
 
+### Enhanced Life Regeneration
+- **Multiple Interval Support**: If 3 hours pass and the cooldown is 1 hour, players get 3 regenerations at once
+- **Automatic Timestamp Management**: Life lost and regeneration times are automatically tracked
+- **Improved Logic**: More reliable regeneration system with proper anchor time handling
 
+### Runtime Configuration System
+- **In-Game Config Editing**: Modify any config value without server restart
+- **Autocomplete Support**: Tab completion for all config keys
+- **Validation**: Input validation with helpful error messages
+- **Persistence**: Changes are saved to the config file immediately
 
+### Enhanced Commands
+- **Unified Command Structure**: All commands prefixed with `/softhardcore`
+- **Bulk Operations**: Set lives for all players (online and offline) at once
+- **Better Feedback**: Detailed confirmation messages for all operations
+- **Admin Tools**: Comprehensive admin command suite
 
+### Improved User Experience
+- **Human-Readable Durations**: Ban messages show "2 days, 3 hours" instead of raw seconds
+- **Better Config Format**: Comments above config lines for cleaner editing
+- **Robust Error Handling**: Graceful handling of invalid config values
+- **Enhanced Feedback**: Clear success/error messages for all operations
 
-### Dependencies
+### 🚀 Dependencies
 
 This mod requires the following dependencies to function properly:
 
 | Dependency | Version | Description |
 |------------|---------|-------------|
-| **Fabric Loader** | 0.16.10+ | The mod loader that runs Fabric mods |
-| **Fabric API** | Latest for 1.20.1 | Core Fabric API providing essential modding functionality |
 | **Cardinal Components API** | 5.2.3 | Used for the lives component system |
-| **Java** | 17+ | Required Java version for Minecraft 1.20.1 |
 
 
 
 ## ⚙️ Configuration
 
-The mod creates a configuration file at `config/softhardcoreconfig.properties` when first run. You can edit this file to customize the mod's behavior.
+The mod creates a configuration file at `config/softhardcoreconfig.properties` when first run. You can edit this file to customize the mod's behavior, or use the in-game commands to modify settings at runtime.
 
 ### Configuration Options
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `default.lives` | Integer | `15` | Number of lives each player starts with |
-| `ban.duration` | Duration | `PT48H` | How long players are banned when they run out of lives (ISO-8601 format) |
+| `default.lives` | Integer | `25` | Number of lives each player starts with |
+| `ban.duration` | Duration | `P2D` | How long players are banned when they run out of lives (ISO-8601 format) |
 | `lives.dropped.on.death` | Integer | `1` | Number of life hearts dropped when a player dies |
 | `heart.drop.mode` | String | `NEUTRAL` | When life hearts are dropped (see [Heart Drop Modes](#heart-drop-modes)) |
 | `life.regen.cooldown` | Duration | `PT24H` | Time between automatic life regeneration (ISO-8601 format) |
@@ -74,77 +94,124 @@ The mod uses ISO-8601 duration format for time-based settings:
 
 | Duration | Format | Description |
 |----------|--------|-------------|
-| 6 seconds | `PT6S` | 6 seconds |
+| 6 seconds | `PT1S` | 1 second |
 | 1 minute | `PT1M` | 1 minute |
 | 1 hour | `PT1H` | 1 hour |
 | 1 day | `P1D` | 24 hours |
 | 1 week | `P7D` | 7 days |
 | 1 hour 30 minutes | `PT1H30M` | 1 hour and 30 minutes |
 
+### Runtime Configuration
+
+You can modify configuration values at runtime using in-game commands:
+
+- **View all config**: `/softhardcore config` - Shows all current configuration values
+- **Set config value**: `/softhardcore setconfig <key> <value>` - Changes a config value immediately
+- **Reload config**: `/softhardcore reloadconfig` - Reloads the config file from disk
+
+**Note**: Changes made via commands are saved to the config file and persist across server restarts.
+
 ### Example Configuration
 
 ```properties
-# Players start with 3 lives
-default.lives=3
+# Players start with 25 lives
+default.lives=25
 
-# Players are banned for 1 hour when they run out of lives
-ban.duration=PT1H
+# Players are banned for 2 days when they run out of lives
+ban.duration=P2D
 
-# Drop 2 life hearts when a player dies
-lives.dropped.on.death=2
+# Drop 1 life heart when a player dies
+lives.dropped.on.death=1
 
-# Use team-based heart dropping
-heart.drop.mode=TEAM
+# Use neutral heart dropping (all deaths drop hearts)
+heart.drop.mode=NEUTRAL
 
-# Lives regenerate every 12 hours
-life.regen.cooldown=PT12H
+# Lives regenerate every 15 seconds (for testing)
+life.regen.cooldown=PT15S
 
-# Players get 2 lives when their ban expires
-returning.lives=2
+# Players get 5 lives when their ban expires
+returning.lives=5
 
-# Life hearts give 2 lives when consumed
-lives.gained.from.heart=2
+# Life hearts give 1 life when consumed
+lives.gained.from.heart=1
 
-# Show up to 10 players on the scoreboard
-scoreboard.max.rows=10
+# Show up to 5 players on the scoreboard
+scoreboard.max.rows=5
 
 # Heart drop probabilities (0.0 = never, 1.0 = always)
-passive.death.heart.drop.probability=0.8
+passive.death.heart.drop.probability=1.0
 player.death.heart.drop.probability=1.0
 ```
 
 ## 🎮 Commands
 
+All commands are prefixed with `/softhardcore` for better organization.
+
 ### Player Commands
 
-#### `/lives`
-- **Description**: Check your own remaining lives
+#### `/softhardcore getlives [player]`
+- **Description**: Check remaining lives (your own or another player's)
 - **Permission**: Available to all players
-- **Usage**: `/lives`
-- **Example**: Shows "You have 2 lives remaining."
+- **Usage**: 
+  - `/softhardcore getlives` - Check your own lives
+  - `/softhardcore getlives <player>` - Check another player's lives
+- **Example**: 
+  - Shows "You have 2 lives remaining."
+  - `/softhardcore getlives Steve` shows "Steve has 1 lives remaining."
 
-#### `/getlives <player>`
-- **Description**: Check another player's remaining lives
+#### `/softhardcore config`
+- **Description**: View all current configuration values
 - **Permission**: Available to all players
-- **Usage**: `/getlives <player>`
-- **Example**: `/getlives Steve` shows "Steve has 1 lives remaining."
+- **Usage**: `/softhardcore config`
+- **Example**: Shows all config options with their current values
 
 ### Admin Commands
 
-#### `/setlives <player> <amount>`
-- **Description**: Set a player's lives to a specific amount
+#### `/softhardcore setlives <player> <amount>`
+- **Description**: Set a specific player's lives to a specific amount
 - **Permission**: Requires operator level 2+ (admin only)
-- **Usage**: `/setlives <player> <amount>`
-- **Example**: `/setlives Alex 5` sets Alex's lives to 5
-- **Note**: Lives cannot be set below 1 to avoid triggering ban logic
+- **Usage**: `/softhardcore setlives <player> <amount>`
+- **Example**: `/softhardcore setlives Alex 5` sets Alex's lives to 5
+- **Note**: Lives can be set between 0 and the maximum configured lives
+
+#### `/softhardcore setalllives <amount>`
+- **Description**: Set all players' lives to a specific amount (both online and offline)
+- **Permission**: Requires operator level 2+ (admin only)
+- **Usage**: `/softhardcore setalllives <amount>`
+- **Example**: `/softhardcore setalllives 25` sets all players to 25 lives
+- **Features**:
+  - Updates all currently online players immediately
+  - Updates all offline players who have ever joined the server
+  - Shows confirmation with counts of online/offline players affected
+  - Perfect for server resets or event management
+
+#### `/softhardcore setconfig <key> <value>`
+- **Description**: Modify a configuration value at runtime
+- **Permission**: Requires operator level 2+ (admin only)
+- **Usage**: `/softhardcore setconfig <key> <value>`
+- **Example**: `/softhardcore setconfig default.lives 30`
+- **Features**:
+  - Autocomplete suggestions for config keys (press Tab)
+  - Validates values before applying
+  - Saves changes to config file immediately
+  - Changes persist across server restarts
+- **Available Keys**: All configuration options (see [Configuration](#-configuration))
+
+#### `/softhardcore reloadconfig`
+- **Description**: Reload the configuration file from disk
+- **Permission**: Requires operator level 2+ (admin only)
+- **Usage**: `/softhardcore reloadconfig`
+- **Example**: Reloads all config values from `softhardcoreconfig.properties`
+- **Use Case**: When you've manually edited the config file and want to apply changes
 
 ## 🎯 Gameplay Mechanics
 
 ### Life System
-- Players start with a configurable number of lives (default: 2)
+- Players start with a configurable number of lives (default: 25)
 - Each death reduces lives by 1
 - When lives reach 0, the player is temporarily banned
 - Lives are displayed on the player list and in-game HUD
+- Lives are automatically managed with proper timestamp tracking
 
 ### Life Hearts
 - Life hearts are special items that can restore lives
@@ -154,15 +221,18 @@ player.death.heart.drop.probability=1.0
 
 ### Ban System
 - When a player runs out of lives, they are temporarily banned
-- Ban duration is configurable (default: 6 seconds for testing)
+- Ban duration is configurable (default: 2 days)
 - Players can rejoin after the ban expires
 - Returning players get a configurable number of lives back
+- Ban messages show human-readable duration (e.g., "2 days, 3 hours, 15 minutes")
 
 ### Life Regeneration
 - Lives can automatically regenerate over time
-- Regeneration cooldown is configurable (default: 24 hours)
+- Regeneration cooldown is configurable (default: 15 seconds for testing)
+- **Multiple Interval Support**: If multiple cooldown periods have passed, all pending regenerations are applied at once
 - Players must wait the full cooldown period between regenerations
 - New players can regenerate immediately
+- Regeneration timestamps are automatically managed
 
 ## 🎭 Heart Drop Modes
 

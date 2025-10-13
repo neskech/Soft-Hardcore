@@ -15,12 +15,12 @@ public class BasicConfigProvider implements SimpleConfig.DefaultConfig {
 
     public void addKeyValuePair(Pair<String, Object> keyValuePair, String comment) {
         configsList.add(keyValuePair);
-        configContents += keyValuePair.getFirst() + "=" + keyValuePair.getSecond() + " #"
-                + comment + " | default: " + keyValuePair.getSecond() + "\n";
+        configContents += "# " + comment + " | default: " + keyValuePair.getSecond() + "\n";
+        configContents += keyValuePair.getFirst() + "=" + keyValuePair.getSecond() + "\n\n";
     }
 
     @Override
     public String get(String namespace) {
-        return "";
+        return configContents;
     }
 }

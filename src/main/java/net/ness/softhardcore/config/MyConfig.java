@@ -8,6 +8,30 @@ import java.time.Duration;
 public class MyConfig {
     private static SimpleConfig CONFIG;
 
+    // Keys
+    public static final String KEY_DEFAULT_LIVES = "default.lives";
+    public static final String KEY_BAN_DURATION = "ban.duration";
+    public static final String KEY_LIVES_DROPPED = "lives.dropped.on.death";
+    public static final String KEY_HEART_DROP_MODE = "heart.drop.mode";
+    public static final String KEY_LIFE_REGEN_COOLDOWN = "life.regen.cooldown";
+    public static final String KEY_RETURNING_LIVES = "returning.lives";
+    public static final String KEY_LIVES_GAINED_FROM_HEART = "lives.gained.from.heart";
+    public static final String KEY_SCOREBOARD_MAX_ROWS = "scoreboard.max.rows";
+    public static final String KEY_PASSIVE_DEATH_HEART_DROP_PROBABILITY = "passive.death.heart.drop.probability";
+    public static final String KEY_PLAYER_DEATH_HEART_DROP_PROBABILITY = "player.death.heart.drop.probability";
+
+    // Defaults (single source of truth)
+    public static final int DEF_DEFAULT_LIVES = 25;
+    public static final String DEF_BAN_DURATION = "P4D"; // ISO-8601 (4 days)
+    public static final int DEF_LIVES_DROPPED = 1;
+    public static final String DEF_HEART_DROP_MODE = "NEUTRAL";
+    public static final String DEF_LIFE_REGEN_COOLDOWN = "PT2D"; // ISO-8601 (2 days)
+    public static final int DEF_RETURNING_LIVES = 5;
+    public static final int DEF_LIVES_GAINED_FROM_HEART = 1;
+    public static final int DEF_SCOREBOARD_MAX_ROWS = 5;
+    public static final double DEF_PASSIVE_DEATH_HEART_DROP_PROBABILITY = 1.0;
+    public static final double DEF_PLAYER_DEATH_HEART_DROP_PROBABILITY = 1.0;
+
     public static int DEFAULT_LIVES;
     public static Duration BAN_DURATION;
     public static int LIVES_DROPPED;
@@ -27,49 +51,107 @@ public class MyConfig {
     }
 
     private static void setDefaults(BasicConfigProvider provider) {
-        provider.addKeyValuePair(new Pair<>("default.lives", 25), "Int");
-        provider.addKeyValuePair(new Pair<>("ban.duration", "PT48H"), "ISO-8601 duration format");
-        provider.addKeyValuePair(new Pair<>("lives.dropped.on.death", 1), "Int");
-        provider.addKeyValuePair(new Pair<>("heart.drop.mode", "NEUTRAL"), "PASSIVE|NEUTRAL|TEAM|COMPETITIVE|VENGEFUL|NEVER");
-        provider.addKeyValuePair(new Pair<>("life.regen.cooldown", "PT24H"), "ISO-8601 duration");
-        provider.addKeyValuePair(new Pair<>("returning.lives", 5), "Int (1 to default.lives)");
-        provider.addKeyValuePair(new Pair<>("lives.gained.from.heart", 1), "Int (lives gained when consuming a heart)");
-        provider.addKeyValuePair(new Pair<>("scoreboard.max.rows", 5), "Int (maximum number of players shown on scoreboard)");
-        provider.addKeyValuePair(new Pair<>("passive.death.heart.drop.probability", 1.0), "Double (0.0-1.0, probability of dropping hearts on natural deaths)");
-        provider.addKeyValuePair(new Pair<>("player.death.heart.drop.probability", 1.0), "Double (0.0-1.0, probability of dropping hearts on player kills)");
+        provider.addKeyValuePair(new Pair<>(KEY_DEFAULT_LIVES, DEF_DEFAULT_LIVES), "Int");
+        provider.addKeyValuePair(new Pair<>(KEY_BAN_DURATION, DEF_BAN_DURATION), "ISO-8601 duration format");
+        provider.addKeyValuePair(new Pair<>(KEY_LIVES_DROPPED, DEF_LIVES_DROPPED), "Int");
+        provider.addKeyValuePair(new Pair<>(KEY_HEART_DROP_MODE, DEF_HEART_DROP_MODE), "PASSIVE|NEUTRAL|TEAM|COMPETITIVE|VENGEFUL|NEVER");
+        provider.addKeyValuePair(new Pair<>(KEY_LIFE_REGEN_COOLDOWN, DEF_LIFE_REGEN_COOLDOWN), "ISO-8601 duration");
+        provider.addKeyValuePair(new Pair<>(KEY_RETURNING_LIVES, DEF_RETURNING_LIVES), "Int (1 to default.lives)");
+        provider.addKeyValuePair(new Pair<>(KEY_LIVES_GAINED_FROM_HEART, DEF_LIVES_GAINED_FROM_HEART), "Int (lives gained when consuming a heart)");
+        provider.addKeyValuePair(new Pair<>(KEY_SCOREBOARD_MAX_ROWS, DEF_SCOREBOARD_MAX_ROWS), "Int (maximum number of players shown on scoreboard)");
+        provider.addKeyValuePair(new Pair<>(KEY_PASSIVE_DEATH_HEART_DROP_PROBABILITY, DEF_PASSIVE_DEATH_HEART_DROP_PROBABILITY), "Double (0.0-1.0, probability of dropping hearts on natural deaths)");
+        provider.addKeyValuePair(new Pair<>(KEY_PLAYER_DEATH_HEART_DROP_PROBABILITY, DEF_PLAYER_DEATH_HEART_DROP_PROBABILITY), "Double (0.0-1.0, probability of dropping hearts on player kills)");
     }
 
     private static void assignClassDefaults() {
-        DEFAULT_LIVES = CONFIG.getOrDefault("default.lives", 2);
-        BAN_DURATION = Duration.parse(CONFIG.getOrDefault("ban.duration", "PT6S"));
-        LIVES_DROPPED = CONFIG.getOrDefault("lives.dropped.on.death", 3);
+        DEFAULT_LIVES = CONFIG.getOrDefault(KEY_DEFAULT_LIVES, DEF_DEFAULT_LIVES);
+        
+        // Parse ban duration with error handling
+        String banDurationStr = CONFIG.getOrDefault(KEY_BAN_DURATION, DEF_BAN_DURATION);
+        try {
+            BAN_DURATION = Duration.parse(banDurationStr);
+        } catch (Exception e) {
+            SoftHardcore.LOGGER.error("Invalid ban duration format: " + banDurationStr + ", using default: " + DEF_BAN_DURATION);
+            BAN_DURATION = Duration.parse(DEF_BAN_DURATION);
+        }
+        
+        LIVES_DROPPED = CONFIG.getOrDefault(KEY_LIVES_DROPPED, DEF_LIVES_DROPPED);
         
         // Parse heart drop mode
-        String modeStr = CONFIG.getOrDefault("heart.drop.mode", "NEUTRAL");
+        String modeStr = CONFIG.getOrDefault(KEY_HEART_DROP_MODE, DEF_HEART_DROP_MODE);
         try {
             HEART_DROP_MODE = HeartDropMode.valueOf(modeStr.toUpperCase());
         } catch (IllegalArgumentException e) {
             HEART_DROP_MODE = HeartDropMode.NEUTRAL; // Default fallback
         }
         
-        LIFE_REGEN_COOLDOWN = Duration.parse(CONFIG.getOrDefault("life.regen.cooldown", "PT24H"));
+        // Parse life regen cooldown with error handling
+        String regenCooldownStr = CONFIG.getOrDefault(KEY_LIFE_REGEN_COOLDOWN, DEF_LIFE_REGEN_COOLDOWN);
+        try {
+            LIFE_REGEN_COOLDOWN = Duration.parse(regenCooldownStr);
+        } catch (Exception e) {
+            SoftHardcore.LOGGER.error("Invalid life regen cooldown format: " + regenCooldownStr + ", using default: " + DEF_LIFE_REGEN_COOLDOWN);
+            LIFE_REGEN_COOLDOWN = Duration.parse(DEF_LIFE_REGEN_COOLDOWN);
+        }
         
         // Validate returning lives
-        int returningLives = CONFIG.getOrDefault("returning.lives", 1);
+        int returningLives = CONFIG.getOrDefault(KEY_RETURNING_LIVES, DEF_RETURNING_LIVES);
         RETURNING_LIVES = Math.max(1, Math.min(returningLives, DEFAULT_LIVES));
         
-        LIVES_GAINED_FROM_HEART = CONFIG.getOrDefault("lives.gained.from.heart", 1);
+        LIVES_GAINED_FROM_HEART = CONFIG.getOrDefault(KEY_LIVES_GAINED_FROM_HEART, DEF_LIVES_GAINED_FROM_HEART);
         
         // Validate max scoreboard rows (minimum 1, maximum 20)
-        int maxRows = CONFIG.getOrDefault("scoreboard.max.rows", 5);
+        int maxRows = CONFIG.getOrDefault(KEY_SCOREBOARD_MAX_ROWS, DEF_SCOREBOARD_MAX_ROWS);
         MAX_SCOREBOARD_ROWS = Math.max(1, Math.min(maxRows, 20));
         
         // Validate probability values (0.0 to 1.0)
-        double passiveProb = CONFIG.getOrDefault("passive.death.heart.drop.probability", 1.0);
+        double passiveProb = CONFIG.getOrDefault(KEY_PASSIVE_DEATH_HEART_DROP_PROBABILITY, DEF_PASSIVE_DEATH_HEART_DROP_PROBABILITY);
         PASSIVE_DEATH_HEART_DROP_PROBABILITY = Math.max(0.0, Math.min(passiveProb, 1.0));
         
-        double playerProb = CONFIG.getOrDefault("player.death.heart.drop.probability", 1.0);
+        double playerProb = CONFIG.getOrDefault(KEY_PLAYER_DEATH_HEART_DROP_PROBABILITY, DEF_PLAYER_DEATH_HEART_DROP_PROBABILITY);
         PLAYER_DEATH_HEART_DROP_PROBABILITY = Math.max(0.0, Math.min(playerProb, 1.0));
+    }
+
+    /**
+     * Reloads all config values from the file and updates the static fields.
+     * Call this after modifying the config file to apply changes at runtime.
+     */
+    public static void reloadConfig() {
+        try {
+            CONFIG.reload();
+            assignClassDefaults();
+            SoftHardcore.LOGGER.info("SoftHardcore config reloaded successfully");
+        } catch (Exception e) {
+            SoftHardcore.LOGGER.error("Failed to reload config: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Sets a config value and saves it to file.
+     * 
+     * @param key   the config key
+     * @param value the config value
+     * @return true if successful, false if there was an error
+     */
+    public static boolean setConfigValue(String key, String value) {
+        try {
+            CONFIG.set(key, value);
+            CONFIG.save();
+            SoftHardcore.LOGGER.info("Set config " + key + " = " + value);
+            return true;
+        } catch (Exception e) {
+            SoftHardcore.LOGGER.error("Failed to set config " + key + ": " + e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Gets the underlying SimpleConfig instance for advanced operations.
+     * 
+     * @return the SimpleConfig instance
+     */
+    public static SimpleConfig getConfig() {
+        return CONFIG;
     }
 
 }

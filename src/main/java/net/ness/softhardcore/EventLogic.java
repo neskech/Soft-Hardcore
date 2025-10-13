@@ -33,7 +33,6 @@ public class EventLogic {
     private static ActionResult lifeDecrementLogic(ServerPlayerEntity player, DamageSource damageSource) {
         LivesComponent component = MyComponents.LIVES_KEY.get(player);
         component.decrement();
-        component.setLastLifeLostTime(System.currentTimeMillis());
         
         // Component sync will automatically update the client-side cache
 
@@ -160,8 +159,9 @@ public class EventLogic {
             
             // If the ban hasn't expired yet, kick them
             if (timeSinceLifeLost < banDurationMillis) {
-                long remainingSeconds = (banDurationMillis - timeSinceLifeLost) / 1000;
-                String kickMessage = "You ran out of lives! You can rejoin in " + remainingSeconds + " seconds.";
+                long remainingMillis = (banDurationMillis - timeSinceLifeLost);
+                String human = formatDuration(remainingMillis);
+                String kickMessage = "You ran out of lives! You can rejoin in " + human + ".";
                 player.networkHandler.disconnect(Text.literal(kickMessage));
                 return;
             }
@@ -174,8 +174,7 @@ public class EventLogic {
             player.sendMessage(message);
             component.setLives(MyConfig.RETURNING_LIVES);
             // Set both timestamps to current time so they don't immediately regenerate
-            component.setLastLifeRegenTime(currentTime);
-            component.setLastLifeLostTime(currentTime);
+            component.markBanEndNow();
             
             // Component sync will automatically update the client-side cache
         }
@@ -212,14 +211,13 @@ public class EventLogic {
             }
 
             // Store the ban time in the component instead of using Minecraft's ban system
-            component.setLastLifeLostTime(System.currentTimeMillis());
+            component.markBanStartNow();
             
-            // Calculate when the ban will expire
+            // Calculate when the ban will expire (not used directly in message)
             long banDurationMillis = MyConfig.BAN_DURATION.toMillis();
-            long banExpiresAt = System.currentTimeMillis() + banDurationMillis;
             
             // Kick the player from the server with a message
-            String banMessage = "You ran out of lives! You can rejoin in " + (banDurationMillis / 1000) + " seconds.";
+            String banMessage = "You ran out of lives! You can rejoin in " + formatDuration(banDurationMillis) + ".";
             newPlayer.networkHandler.disconnect(Text.literal(banMessage));
         }
     }
@@ -233,13 +231,40 @@ public class EventLogic {
         
         if (component.isPendingBan()) {
             // Player disconnected with a pending ban, store the time they lost their life
-            component.setLastLifeLostTime(System.currentTimeMillis());
+            component.markBanStartNow();
             
             // Clear the pending ban flag
             component.setPendingBan(false);
             
             server.sendMessage(Text.literal("Player " + player.getName() + " disconnected with pending ban"));
         }
+    }
+
+    private static String formatDuration(long millis) {
+        if (millis < 0) millis = 0;
+        long totalSeconds = millis / 1000;
+        long weeks = totalSeconds / (7 * 24 * 3600);
+        totalSeconds %= (7 * 24 * 3600);
+        long days = totalSeconds / (24 * 3600);
+        totalSeconds %= (24 * 3600);
+        long hours = totalSeconds / 3600;
+        totalSeconds %= 3600;
+        long minutes = totalSeconds / 60;
+        long seconds = totalSeconds % 60;
+
+        StringBuilder sb = new StringBuilder();
+        if (weeks > 0) sb.append(weeks).append(weeks == 1 ? " week" : " weeks");
+        if (days > 0) appendWithComma(sb, days + (days == 1 ? " day" : " days"));
+        if (hours > 0) appendWithComma(sb, hours + (hours == 1 ? " hour" : " hours"));
+        if (minutes > 0) appendWithComma(sb, minutes + (minutes == 1 ? " minute" : " minutes"));
+        if (seconds > 0 || sb.length() == 0) appendWithComma(sb, seconds + (seconds == 1 ? " second" : " seconds"));
+
+        return sb.toString();
+    }
+
+    private static void appendWithComma(StringBuilder sb, String part) {
+        if (sb.length() > 0) sb.append(", ");
+        sb.append(part);
     }
 
 }
