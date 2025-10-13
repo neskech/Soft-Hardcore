@@ -1,6 +1,6 @@
 {
     "parent": "item/generated",
     "textures": {
-        "layer0": "softhardcore:item/life_heart"
+        "layer0": "softhardcore:item/heart_texture_16"
     }
 }
