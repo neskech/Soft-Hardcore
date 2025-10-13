@@ -3,7 +3,6 @@
 	"package": "net.ness.softhardcore.mixin",
 	"compatibilityLevel": "JAVA_17",
   "mixins": [
-    "ExampleMixin",
     "PlayerDeathMixin",
     "PlayersListMixin",
     "NametagMixin"

@@ -18,6 +18,7 @@ import net.minecraft.util.Identifier;
 import net.ness.softhardcore.SoftHardcore;
 import net.ness.softhardcore.SoftHardcoreClient;
 import net.ness.softhardcore.component.LivesComponent;
+import net.ness.softhardcore.util.LivesCacheManager;
 import net.ness.softhardcore.component.MyComponents;
 import net.ness.softhardcore.ui.ScalingSystem;
 import org.jetbrains.annotations.NotNull;
@@ -33,7 +34,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.util.*;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 
 @Mixin(PlayerListHud.class)
 public abstract class PlayersListMixin {
@@ -54,7 +54,6 @@ public abstract class PlayersListMixin {
     @Accessor("client") abstract MinecraftClient client();
     
     // Cache to store lives data for dead players
-    private static final Map<UUID, Integer> livesCache = new ConcurrentHashMap<>();
 
     // Scaling methods that take parent container dimensions
     private static int playerEntryWidth(ScalingSystem.ContainerDimensions parent) { 
@@ -240,11 +239,11 @@ public abstract class PlayersListMixin {
                 int l = comp.getLives();
                 lives = String.valueOf(l);
                 // Update cache with current lives data
-                livesCache.put(playerUuid, l);
+                LivesCacheManager.updateLivesCache(playerUuid, l);
             }
         } else {
             // If player is not in world (dead), try to get lives data from cache
-            Integer cachedLives = livesCache.get(playerUuid);
+            Integer cachedLives = LivesCacheManager.getCachedLives(playerUuid);
             if (cachedLives != null) {
                 lives = String.valueOf(cachedLives);
             } else {
@@ -257,7 +256,7 @@ public abstract class PlayersListMixin {
                         if (comp != null) {
                             int l = comp.getLives();
                             lives = String.valueOf(l);
-                            livesCache.put(playerUuid, l);
+                            LivesCacheManager.updateLivesCache(playerUuid, l);
                         }
                     }
                 }

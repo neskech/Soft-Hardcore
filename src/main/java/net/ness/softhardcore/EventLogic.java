@@ -6,7 +6,6 @@ import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.item.ItemStack;
 import net.minecraft.registry.Registries;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.PlayerManager;
 import net.minecraft.server.network.ServerPlayNetworkHandler;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.Text;
@@ -19,10 +18,7 @@ import net.ness.softhardcore.config.HeartDropMode;
 import net.ness.softhardcore.config.MyConfig;
 import net.ness.softhardcore.event.PlayerDeathCallback;
 import net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents;
-import net.ness.softhardcore.util.LivesCacheManager;
 
-import java.time.Instant;
-import java.util.Date;
 
 public class EventLogic {
 
@@ -39,8 +35,7 @@ public class EventLogic {
         component.decrement();
         component.setLastLifeLostTime(System.currentTimeMillis());
         
-        // Update the lives cache for the scoreboard
-        LivesCacheManager.updateLivesCache(player.getUuid(), component.getLives());
+        // Component sync will automatically update the client-side cache
 
         // Only set pending ban if the player's run out of lives
         if (component.getLives() > 0) {
@@ -153,9 +148,10 @@ public class EventLogic {
             component.setLastLifeRegenTime(currentTime);
             component.setLastLifeLostTime(currentTime);
             
-            // Update the lives cache for the scoreboard
-            LivesCacheManager.updateLivesCache(player.getUuid(), component.getLives());
+            // Component sync will automatically update the client-side cache
         }
+        
+        // Component sync will automatically update the client-side cache
         
         // Trigger bulk sync to ensure joining player sees all other players' lives
         syncAllPlayersLives(m);
@@ -164,11 +160,7 @@ public class EventLogic {
     private static void syncAllPlayersLives(MinecraftServer server) {
         // Sync all players' lives to all other players
         for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
-            LivesComponent component = MyComponents.LIVES_KEY.get(player);
             MyComponents.LIVES_KEY.sync(player);
-            
-            // Update the lives cache for the scoreboard
-            LivesCacheManager.updateLivesCache(player.getUuid(), component.getLives());
         }
     }
 

@@ -5,6 +5,7 @@ import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.ness.softhardcore.config.MyConfig;
+import net.ness.softhardcore.util.LivesCacheManager;
 
 public class LivesComponent implements AutoSyncedComponent {
     private final PlayerEntity provider;
@@ -104,6 +105,9 @@ public class LivesComponent implements AutoSyncedComponent {
         this.lastLifeLostTime = nbtCompound.getLong("lastLifeLostTime");
         this.lastLifeRegenTime = nbtCompound.getLong("lastLifeRegenTime");
         this.pendingBan = nbtCompound.getBoolean("pendingBan");
+        
+        // Update the client-side cache when component data is synced
+        LivesCacheManager.updateLivesCache(this.provider.getUuid(), this.lives);
     }
 
     @Override
