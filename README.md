@@ -2,7 +2,7 @@
 
 A soft-hardcore, highly configurable Minecraft mod that gives each player a limited number of lives. Once players run out of lives, they are temporarily banned for a configurable amount of time. Players can drop life hearts to give other players back lives, creating a cooperative survival experience.
 
-The mod also provides some minor UI reworks, health and armor information now appear on top of nameplates and the number of lives reminaing on a player while checking the scoreboard, compatable with teams, alongside a couple of other minor scoreboard enhancements.
+The mod also provides some minor UI reworks, lives and armor information now appear on top of nameplates and the number of lives reminaing on a player while checking the scoreboard, compatable with teams, alongside a couple of other minor scoreboard enhancements.
 
 
 ## ✨ Features
