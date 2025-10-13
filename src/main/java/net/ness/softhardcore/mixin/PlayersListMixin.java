@@ -21,6 +21,7 @@ import net.ness.softhardcore.component.LivesComponent;
 import net.ness.softhardcore.util.LivesCacheManager;
 import net.ness.softhardcore.component.MyComponents;
 import net.ness.softhardcore.ui.ScalingSystem;
+import net.ness.softhardcore.config.MyConfig;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Vector2i;
@@ -38,10 +39,10 @@ import java.util.UUID;
 @Mixin(PlayerListHud.class)
 public abstract class PlayersListMixin {
 
-    private static final int MAX_ROWS = 5;
+    // MAX_ROWS is now configurable via MyConfig.MAX_SCOREBOARD_ROWS
     
     private static final int BACKGROUND_COLOR = 0x60000000;      // 50% black
-    private static final int PLAYER_ENTRY_BACKGROUND_COLOR = 0x20FFFFFF; // 25% white tint overlay
+    private static final int PLAYER_ENTRY_BACKGROUND_COLOR = 0x4aaaaaaa; // 25% white tint overlay
     
     private static final Identifier TEAM_ICON = new Identifier(SoftHardcore.MOD_ID, "textures/team_icon.png");
     private static final Identifier ICONS_TEXTURE = new Identifier("textures/gui/icons.png");
@@ -142,8 +143,8 @@ public abstract class PlayersListMixin {
         // Create screen container dimensions
         ScalingSystem.ContainerDimensions screenContainer = ScalingSystem.ContainerDimensions.screen();
 
-        int numColumns = (int) Math.ceil((float) numPlayers / MAX_ROWS);
-        int numRows = Math.min(numPlayers, MAX_ROWS);
+        int numColumns = (int) Math.ceil((float) numPlayers / MyConfig.MAX_SCOREBOARD_ROWS);
+        int numRows = Math.min(numPlayers, MyConfig.MAX_SCOREBOARD_ROWS);
         
         // Calculate the bounding width and height of the player entries using screen dimensions
         int entryWidth = playerEntryWidth(screenContainer);
@@ -180,8 +181,8 @@ public abstract class PlayersListMixin {
         Map<String, PlayerEntity> playerMap = buildPlayerMap();
 
         for (int col = 0; col < numColumns; col++) {
-            for (int row = 0; row < MAX_ROWS; row++) {
-                int i = col * MAX_ROWS + row;
+            for (int row = 0; row < MyConfig.MAX_SCOREBOARD_ROWS; row++) {
+                int i = col * MyConfig.MAX_SCOREBOARD_ROWS + row;
                 if (i >= numPlayers) break;
                 int x = entryX + (entryWidth + gapX) * col;
                 int y = entryY + (entryHeight + gapY) * row;

@@ -15,6 +15,7 @@ public class MyConfig {
     public static Duration LIFE_REGEN_COOLDOWN;
     public static int RETURNING_LIVES;
     public static int LIVES_GAINED_FROM_HEART;
+    public static int MAX_SCOREBOARD_ROWS;
 
     public static void registerConfig() {
         BasicConfigProvider provider = new BasicConfigProvider();
@@ -31,6 +32,7 @@ public class MyConfig {
         provider.addKeyValuePair(new Pair<>("life.regen.cooldown", "PT24H"), "ISO-8601 duration");
         provider.addKeyValuePair(new Pair<>("returning.lives", 1), "Int (1 to default.lives)");
         provider.addKeyValuePair(new Pair<>("lives.gained.from.heart", 1), "Int (lives gained when consuming a heart)");
+        provider.addKeyValuePair(new Pair<>("scoreboard.max.rows", 5), "Int (maximum number of players shown on scoreboard)");
     }
 
     private static void assignClassDefaults() {
@@ -53,6 +55,10 @@ public class MyConfig {
         RETURNING_LIVES = Math.max(1, Math.min(returningLives, DEFAULT_LIVES));
         
         LIVES_GAINED_FROM_HEART = CONFIG.getOrDefault("lives.gained.from.heart", 1);
+        
+        // Validate max scoreboard rows (minimum 1, maximum 20)
+        int maxRows = CONFIG.getOrDefault("scoreboard.max.rows", 5);
+        MAX_SCOREBOARD_ROWS = Math.max(1, Math.min(maxRows, 20));
     }
 
 }
