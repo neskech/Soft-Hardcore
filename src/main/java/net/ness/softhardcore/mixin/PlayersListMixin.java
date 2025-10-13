@@ -38,7 +38,7 @@ import java.util.concurrent.ConcurrentHashMap;
 @Mixin(PlayerListHud.class)
 public abstract class PlayersListMixin {
 
-    private static final int MAX_ROWS = 2;
+    private static final int MAX_ROWS = 5;
     
     private static final int BACKGROUND_COLOR = 0x80000000;      // 50% black
     private static final int PLAYER_ENTRY_BACKGROUND_COLOR = 0x40FFFFFF; // 25% white tint overlay

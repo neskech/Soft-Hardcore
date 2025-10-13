@@ -73,7 +73,12 @@ public class LivesComponent implements AutoSyncedComponent {
         long cooldownMillis = MyConfig.LIFE_REGEN_COOLDOWN != null ? 
             MyConfig.LIFE_REGEN_COOLDOWN.toMillis() : 24 * 60 * 60 * 1000L;
         
-        // Check cooldown from when player last lost a life, not when they last regenerated
+        // For new players who haven't died yet, allow regeneration immediately
+        if (this.lastLifeLostTime == 0) {
+            return true;
+        }
+        
+        // Check cooldown from when player last lost a life
         long timeSinceLastDeath = currentTime - this.lastLifeLostTime;
         return timeSinceLastDeath >= cooldownMillis;
     }
