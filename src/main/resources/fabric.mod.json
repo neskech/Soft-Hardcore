@@ -1,15 +1,16 @@
 {
 	"schemaVersion": 1,
 	"id": "softhardcore",
-	"version": "${version}",
+	"version": "0.1",
 	"name": "SoftHardcore",
-	"description": "A server side hardcore mod that gives each player a limited number of lives",
+	"description": "A soft-hardcore, highly configurable mod that gives each player alimited number of lives. Once players die, they are banned for a configurable amount of time. Other players can drop hearts to give players back lives.",
 	"authors": [
-		"Neskech"
+		"Neskech",
+		"AlternateFire"
 	],
 	"contact": {
-		"homepage": "https://fabricmc.net/",
-		"sources": "https://github.com/FabricMC/fabric-example-mod"
+		"homepage": "https://github.com/neskech/Soft-Hardcore",
+		"sources": "https://github.com/neskech/Soft-Hardcore"
 	},
 	"license": "MIT",
 	"icon": "assets/softhardcore/icon.png",
@@ -40,7 +41,8 @@
 		"fabricloader": ">=0.16.10",
 		"minecraft": "~1.20.1",
 		"java": ">=17",
-		"fabric-api": "*"
+		"fabric-api": "*",
+		"cardinal-components": "5.2.3"
 	},
 	"suggests": {
 		"another-mod": "*"

@@ -28,7 +28,7 @@ public class MyConfig {
         provider.addKeyValuePair(new Pair<>("default.lives", 2), "Int");
         provider.addKeyValuePair(new Pair<>("ban.duration", "PT6S"), "ISO-8601 duration format");
         provider.addKeyValuePair(new Pair<>("lives.dropped.on.death", 1), "Int");
-        provider.addKeyValuePair(new Pair<>("heart.drop.mode", "NEUTRAL"), "PASSIVE|NEUTRAL|TEAM|COMPETITIVE");
+        provider.addKeyValuePair(new Pair<>("heart.drop.mode", "NEUTRAL"), "PASSIVE|NEUTRAL|TEAM|COMPETITIVE|NEVER");
         provider.addKeyValuePair(new Pair<>("life.regen.cooldown", "PT24H"), "ISO-8601 duration");
         provider.addKeyValuePair(new Pair<>("returning.lives", 1), "Int (1 to default.lives)");
         provider.addKeyValuePair(new Pair<>("lives.gained.from.heart", 1), "Int (lives gained when consuming a heart)");

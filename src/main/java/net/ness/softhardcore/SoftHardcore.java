@@ -2,16 +2,9 @@ package net.ness.softhardcore;
 
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
-
-import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
-import net.minecraft.text.Text;
-import net.minecraft.util.ActionResult;
-import net.minecraft.util.Formatting;
 import net.ness.softhardcore.command.Commands;
-import net.ness.softhardcore.component.MyComponents;
 import net.ness.softhardcore.config.MyConfig;
 import net.ness.softhardcore.item.ModItems;
-import net.ness.softhardcore.event.PlayerDeathCallback;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

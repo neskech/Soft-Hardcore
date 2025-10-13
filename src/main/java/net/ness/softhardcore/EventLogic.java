@@ -91,6 +91,10 @@ public class EventLogic {
                 ServerPlayerEntity competitiveAttacker = (ServerPlayerEntity) damageSource.getAttacker();
                 return !areOnSameTeam(player, competitiveAttacker);
                 
+            case NEVER:
+                // Never drop hearts
+                return false;
+                
             default:
                 return true; // Default to dropping hearts
         }
