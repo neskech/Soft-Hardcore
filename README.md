@@ -94,10 +94,11 @@ The mod uses ISO-8601 duration format for time-based settings:
 
 | Duration | Format | Description |
 |----------|--------|-------------|
-| 6 seconds | `PT1S` | 1 second |
+| 15 seconds | `PT15S` | 15 seconds |
 | 1 minute | `PT1M` | 1 minute |
 | 1 hour | `PT1H` | 1 hour |
-| 1 day | `P1D` | 24 hours |
+| 24 hours | `PT24H` | 24 hours |
+| 2 days | `P2D` | 2 days |
 | 1 week | `P7D` | 7 days |
 | 1 hour 30 minutes | `PT1H30M` | 1 hour and 30 minutes |
 
@@ -126,8 +127,8 @@ lives.dropped.on.death=1
 # Use neutral heart dropping (all deaths drop hearts)
 heart.drop.mode=NEUTRAL
 
-# Lives regenerate every 15 seconds (for testing)
-life.regen.cooldown=PT15S
+# Lives regenerate every 24 hours
+life.regen.cooldown=PT24H
 
 # Players get 5 lives when their ban expires
 returning.lives=5
@@ -228,7 +229,7 @@ All commands are prefixed with `/softhardcore` for better organization.
 
 ### Life Regeneration
 - Lives can automatically regenerate over time
-- Regeneration cooldown is configurable (default: 15 seconds for testing)
+- Regeneration cooldown is configurable (default: 24 hours)
 - **Multiple Interval Support**: If multiple cooldown periods have passed, all pending regenerations are applied at once
 - Players must wait the full cooldown period between regenerations
 - New players can regenerate immediately

@@ -22,10 +22,10 @@ public class MyConfig {
 
     // Defaults (single source of truth)
     public static final int DEF_DEFAULT_LIVES = 25;
-    public static final String DEF_BAN_DURATION = "P4D"; // ISO-8601 (4 days)
+    public static final String DEF_BAN_DURATION = "P2D"; // ISO-8601 (2 days)
     public static final int DEF_LIVES_DROPPED = 1;
     public static final String DEF_HEART_DROP_MODE = "NEUTRAL";
-    public static final String DEF_LIFE_REGEN_COOLDOWN = "PT2D"; // ISO-8601 (2 days)
+    public static final String DEF_LIFE_REGEN_COOLDOWN = "PT24H"; // ISO-8601 (24 hours)
     public static final int DEF_RETURNING_LIVES = 5;
     public static final int DEF_LIVES_GAINED_FROM_HEART = 1;
     public static final int DEF_SCOREBOARD_MAX_ROWS = 5;
