@@ -1,7 +1,7 @@
 {
 	"schemaVersion": 1,
 	"id": "softhardcore",
-	"version": "1.0.2",
+	"version": "1.0.3",
 	"name": "SoftHardcore",
 	"description": "A soft-hardcore, highly configurable mod that gives each player alimited number of lives. Once players die, they are banned for a configurable amount of time. Other players can drop hearts to give players back lives.",
 	"authors": [
