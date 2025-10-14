@@ -38,7 +38,8 @@ public class Commands {
             MyConfig.KEY_LIVES_GAINED_FROM_HEART,
             MyConfig.KEY_SCOREBOARD_MAX_ROWS,
             MyConfig.KEY_PASSIVE_DEATH_HEART_DROP_PROBABILITY,
-            MyConfig.KEY_PLAYER_DEATH_HEART_DROP_PROBABILITY
+            MyConfig.KEY_PLAYER_DEATH_HEART_DROP_PROBABILITY,
+            MyConfig.KEY_LIFE_REGEN_CEILING
         };
         
         // Filter and suggest matching keys
@@ -66,7 +67,8 @@ public class Commands {
                 .executes(Commands::getLivesCommandSelf)
                 .then(argument("player", net.minecraft.command.argument.EntityArgumentType.player())
                     .executes(Commands::getLivesCommand)))
-            .then(literal("config")
+            .then(literal("getConfig")
+                .requires(source -> source.hasPermissionLevel(2)) // Admin only (level 2+)
                 .executes(Commands::showConfig))
             .then(literal("setconfig")
                 .requires(source -> source.hasPermissionLevel(2)) // Admin only
@@ -156,6 +158,7 @@ public class Commands {
         source.sendFeedback(() -> Text.literal("Max Scoreboard Rows: " + MyConfig.MAX_SCOREBOARD_ROWS).formatted(Formatting.WHITE), false);
         source.sendFeedback(() -> Text.literal("Passive Death Heart Drop Probability: " + MyConfig.PASSIVE_DEATH_HEART_DROP_PROBABILITY).formatted(Formatting.WHITE), false);
         source.sendFeedback(() -> Text.literal("Player Death Heart Drop Probability: " + MyConfig.PLAYER_DEATH_HEART_DROP_PROBABILITY).formatted(Formatting.WHITE), false);
+        source.sendFeedback(() -> Text.literal("Life Regeneration Ceiling: " + MyConfig.LIFE_REGEN_CEILING).formatted(Formatting.WHITE), false);
         
         return 1;
     }
@@ -216,7 +219,8 @@ public class Commands {
                key.equals(MyConfig.KEY_LIVES_GAINED_FROM_HEART) ||
                key.equals(MyConfig.KEY_SCOREBOARD_MAX_ROWS) ||
                key.equals(MyConfig.KEY_PASSIVE_DEATH_HEART_DROP_PROBABILITY) ||
-               key.equals(MyConfig.KEY_PLAYER_DEATH_HEART_DROP_PROBABILITY);
+               key.equals(MyConfig.KEY_PLAYER_DEATH_HEART_DROP_PROBABILITY) ||
+               key.equals(MyConfig.KEY_LIFE_REGEN_CEILING);
     }
     
     private static String validateConfigValue(String key, String value) {
@@ -227,6 +231,7 @@ public class Commands {
                 case MyConfig.KEY_RETURNING_LIVES:
                 case MyConfig.KEY_LIVES_GAINED_FROM_HEART:
                 case MyConfig.KEY_SCOREBOARD_MAX_ROWS:
+                case MyConfig.KEY_LIFE_REGEN_CEILING:
                     int intVal = Integer.parseInt(value);
                     if (key.equals(MyConfig.KEY_DEFAULT_LIVES) && (intVal < 1 || intVal > 100)) {
                         return "Must be between 1 and 100";
@@ -239,6 +244,9 @@ public class Commands {
                     }
                     if (key.equals(MyConfig.KEY_RETURNING_LIVES) && intVal < 1) {
                         return "Must be 1 or greater";
+                    }
+                    if (key.equals(MyConfig.KEY_LIFE_REGEN_CEILING) && (intVal < 1 || intVal > MyConfig.DEFAULT_LIVES)) {
+                        return "Must be between 1 and " + MyConfig.DEFAULT_LIVES;
                     }
                     break;
                     

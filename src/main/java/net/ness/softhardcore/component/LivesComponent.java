@@ -31,21 +31,20 @@ public class LivesComponent implements AutoSyncedComponent {
         this.setLives(this.lives + 1);
     }
 
-    public void setLives(int lives) {
+    public int setLives(int lives) {
         int previous = this.lives;
         int clamped = Math.max(Math.min(lives, MyConfig.DEFAULT_LIVES), 0);
         this.lives = clamped;
         if (clamped < previous) {
             // Lives decreased
             this.lastLifeLostTime = System.currentTimeMillis();
-        } else if (clamped > previous) {
-            // Lives increased
-            this.lastLifeRegenTime = System.currentTimeMillis();
         }
-        if (clamped == MyConfig.DEFAULT_LIVES) {
+        boolean wentBelowRegenerationCeiling = previous >= MyConfig.LIFE_REGEN_CEILING && clamped < MyConfig.LIFE_REGEN_CEILING;
+        if (clamped == MyConfig.DEFAULT_LIVES || wentBelowRegenerationCeiling) { 
             this.lastLifeRegenTime = 0;
         }
         MyComponents.LIVES_KEY.sync(this.provider);
+        return clamped;
     }
 
     public long getLastLifeLostTime() {
@@ -85,7 +84,7 @@ public class LivesComponent implements AutoSyncedComponent {
     }
 
     public int tryRegenerateLife() {
-        if (this.lives == MyConfig.DEFAULT_LIVES || this.pendingBan) {
+        if (this.lives >= MyConfig.LIFE_REGEN_CEILING || this.pendingBan) {
             return 0;
         }
 
@@ -101,14 +100,20 @@ public class LivesComponent implements AutoSyncedComponent {
             long timeSinceLastAnchor = currentTime - anchorTime;
             regenerationAmount = (int) (timeSinceLastAnchor / cooldownMillis);
             SoftHardcore.LOGGER.info("Regeneration amount: " + regenerationAmount + " from " + anchorTime / 1000 + " to " + currentTime / 1000 + " for a difference of " + timeSinceLastAnchor / 1000 + " and cooldown of " + cooldownMillis / 1000);
-            regenerationAmount = Math.min(regenerationAmount, MyConfig.DEFAULT_LIVES - this.lives);
+            regenerationAmount = Math.min(regenerationAmount, MyConfig.LIFE_REGEN_CEILING - this.lives);
         }
 
         if (regenerationAmount <= 0) {
             return 0;
         }
+        
+        int previous = this.lives;
+        int current = this.setLives(this.lives + regenerationAmount);
 
-        this.setLives(this.lives + regenerationAmount);
+        if (current > previous) {
+            this.lastLifeRegenTime = System.currentTimeMillis();
+        }
+
         return regenerationAmount;
     }
 

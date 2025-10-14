@@ -74,6 +74,7 @@ The mod creates a configuration file at `config/softhardcoreconfig.properties` w
 | `scoreboard.max.rows` | Integer | `5` | Maximum number of players shown on the lives scoreboard (1-20) |
 | `passive.death.heart.drop.probability` | Double | `1.0` | Probability of dropping hearts on natural deaths (0.0-1.0) |
 | `player.death.heart.drop.probability` | Double | `1.0` | Probability of dropping hearts on player kills (0.0-1.0) |
+| `life.regen.ceiling` | Integer | `25` | Lives at or above this value will not regenerate |
 
 ### Probability System
 
@@ -106,7 +107,7 @@ The mod uses ISO-8601 duration format for time-based settings:
 
 You can modify configuration values at runtime using in-game commands:
 
-- **View all config**: `/softhardcore config` - Shows all current configuration values
+- **View all config**: `/softhardcore getConfig` - Shows all current configuration values (admin only)
 - **Set config value**: `/softhardcore setconfig <key> <value>` - Changes a config value immediately
 - **Reload config**: `/softhardcore reloadconfig` - Reloads the config file from disk
 
@@ -142,6 +143,9 @@ scoreboard.max.rows=5
 # Heart drop probabilities (0.0 = never, 1.0 = always)
 passive.death.heart.drop.probability=1.0
 player.death.heart.drop.probability=1.0
+
+# Lives at or above this value will not regenerate
+life.regen.ceiling=25
 ```
 
 ## 🎮 Commands
@@ -160,13 +164,14 @@ All commands are prefixed with `/softhardcore` for better organization.
   - Shows "You have 2 lives remaining."
   - `/softhardcore getlives Steve` shows "Steve has 1 lives remaining."
 
-#### `/softhardcore config`
-- **Description**: View all current configuration values
-- **Permission**: Available to all players
-- **Usage**: `/softhardcore config`
-- **Example**: Shows all config options with their current values
 
 ### Admin Commands
+
+#### `/softhardcore getConfig`
+- **Description**: View all current configuration values
+- **Permission**: Requires operator level 2+ (admin only)
+- **Usage**: `/softhardcore getConfig`
+- **Example**: Shows all config options with their current values
 
 #### `/softhardcore setlives <player> <amount>`
 - **Description**: Set a specific player's lives to a specific amount
@@ -234,6 +239,7 @@ All commands are prefixed with `/softhardcore` for better organization.
 - Players must wait the full cooldown period between regenerations
 - New players can regenerate immediately
 - Regeneration timestamps are automatically managed
+- **Regeneration Ceiling**: Players at or above the configured ceiling will not regenerate lives
 
 ## 🎭 Heart Drop Modes
 

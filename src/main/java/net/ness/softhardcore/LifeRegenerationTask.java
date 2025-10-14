@@ -12,7 +12,7 @@ import net.ness.softhardcore.component.MyComponents;
 
 public class LifeRegenerationTask {
     private static long lastCheckTime = 0;
-    private static final int CHECK_SECONDS = 60 * 5; // 5 minutes
+    private static final int CHECK_SECONDS = 1;//60 * 5; // 5 minutes
     private static final long CHECK_INTERVAL = 20 * CHECK_SECONDS; // Check every 5 minutes
 
     public static void register() {

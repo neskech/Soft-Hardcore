@@ -19,18 +19,20 @@ public class MyConfig {
     public static final String KEY_SCOREBOARD_MAX_ROWS = "scoreboard.max.rows";
     public static final String KEY_PASSIVE_DEATH_HEART_DROP_PROBABILITY = "passive.death.heart.drop.probability";
     public static final String KEY_PLAYER_DEATH_HEART_DROP_PROBABILITY = "player.death.heart.drop.probability";
+    public static final String KEY_LIFE_REGEN_CEILING = "life.regen.ceiling";
 
     // Defaults (single source of truth)
     public static final int DEF_DEFAULT_LIVES = 25;
     public static final String DEF_BAN_DURATION = "P2D"; // ISO-8601 (2 days)
     public static final int DEF_LIVES_DROPPED = 1;
     public static final String DEF_HEART_DROP_MODE = "NEUTRAL";
-    public static final String DEF_LIFE_REGEN_COOLDOWN = "PT24H"; // ISO-8601 (24 hours)
+    public static final String DEF_LIFE_REGEN_COOLDOWN = "PT15S"; // ISO-8601 (24 hours)
     public static final int DEF_RETURNING_LIVES = 5;
     public static final int DEF_LIVES_GAINED_FROM_HEART = 1;
     public static final int DEF_SCOREBOARD_MAX_ROWS = 5;
     public static final double DEF_PASSIVE_DEATH_HEART_DROP_PROBABILITY = 1.0;
     public static final double DEF_PLAYER_DEATH_HEART_DROP_PROBABILITY = 1.0;
+    public static final int DEF_LIFE_REGEN_CEILING = 23;
 
     public static int DEFAULT_LIVES;
     public static Duration BAN_DURATION;
@@ -42,6 +44,7 @@ public class MyConfig {
     public static int MAX_SCOREBOARD_ROWS;
     public static double PASSIVE_DEATH_HEART_DROP_PROBABILITY;
     public static double PLAYER_DEATH_HEART_DROP_PROBABILITY;
+    public static int LIFE_REGEN_CEILING;
 
     public static void registerConfig() {
         BasicConfigProvider provider = new BasicConfigProvider();
@@ -61,6 +64,7 @@ public class MyConfig {
         provider.addKeyValuePair(new Pair<>(KEY_SCOREBOARD_MAX_ROWS, DEF_SCOREBOARD_MAX_ROWS), "Int (maximum number of players shown on scoreboard)");
         provider.addKeyValuePair(new Pair<>(KEY_PASSIVE_DEATH_HEART_DROP_PROBABILITY, DEF_PASSIVE_DEATH_HEART_DROP_PROBABILITY), "Double (0.0-1.0, probability of dropping hearts on natural deaths)");
         provider.addKeyValuePair(new Pair<>(KEY_PLAYER_DEATH_HEART_DROP_PROBABILITY, DEF_PLAYER_DEATH_HEART_DROP_PROBABILITY), "Double (0.0-1.0, probability of dropping hearts on player kills)");
+        provider.addKeyValuePair(new Pair<>(KEY_LIFE_REGEN_CEILING, DEF_LIFE_REGEN_CEILING), "Int (lives at or above this won't regenerate)");
     }
 
     private static void assignClassDefaults() {
@@ -110,6 +114,10 @@ public class MyConfig {
         
         double playerProb = CONFIG.getOrDefault(KEY_PLAYER_DEATH_HEART_DROP_PROBABILITY, DEF_PLAYER_DEATH_HEART_DROP_PROBABILITY);
         PLAYER_DEATH_HEART_DROP_PROBABILITY = Math.max(0.0, Math.min(playerProb, 1.0));
+        
+        // Validate regeneration ceiling (1 to default lives)
+        int regenCeiling = CONFIG.getOrDefault(KEY_LIFE_REGEN_CEILING, DEF_LIFE_REGEN_CEILING);
+        LIFE_REGEN_CEILING = Math.max(1, Math.min(regenCeiling, DEFAULT_LIVES));
     }
 
     /**
