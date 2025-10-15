@@ -11,10 +11,7 @@ import net.minecraft.util.Formatting;
 import net.minecraft.util.Hand;
 import net.minecraft.util.TypedActionResult;
 import net.minecraft.world.World;
-import net.ness.softhardcore.component.LivesComponent;
-import net.ness.softhardcore.component.MyComponents;
 import net.ness.softhardcore.config.MyConfig;
-import net.ness.softhardcore.util.LivesCacheManager;
 
 public class LifeHeartItem extends Item {
     
@@ -27,23 +24,20 @@ public class LifeHeartItem extends Item {
         ItemStack itemStack = user.getStackInHand(hand);
         
         if (!world.isClient) {
-            // Get the player's lives component
-            LivesComponent component = MyComponents.LIVES_KEY.get(user);
-            
             // Check if the player is at max lives
-            if (component.getLives() >= MyConfig.DEFAULT_LIVES) {
+            if (net.ness.softhardcore.server.LivesService.getLives(world.getServer(), user.getUuid()) >= MyConfig.DEFAULT_LIVES) {
                 user.sendMessage(Text.literal("You already have maximum lives!").formatted(Formatting.RED), false);
                 return new TypedActionResult<>(ActionResult.FAIL, itemStack);
             }
             
             // Calculate how many lives to give
             int livesToGive = MyConfig.LIVES_GAINED_FROM_HEART;
-            int currentLives = component.getLives();
+            int currentLives = net.ness.softhardcore.server.LivesService.getLives(world.getServer(), user.getUuid());
             int newLives = Math.min(currentLives + livesToGive, MyConfig.DEFAULT_LIVES);
             int actualLivesGained = newLives - currentLives;
-            
-            // Give the lives
-            component.setLives(newLives);
+
+            // Give the lives via centralized setLives logic
+            net.ness.softhardcore.server.LivesService.setLives(world.getServer(), user.getUuid(), newLives);
             
             // Play sound effect
             world.playSound(null, user.getX(), user.getY(), user.getZ(), 
@@ -55,8 +49,7 @@ public class LifeHeartItem extends Item {
                 "You gained " + actualLivesGained + " lives!";
             user.sendMessage(Text.literal(message).formatted(Formatting.GREEN), false);
             
-            // Update the lives cache for the scoreboard
-            LivesCacheManager.updateLivesCache(user.getUuid(), component.getLives());
+            // Server broadcast updates client caches
             
             // Consume the item
             if (!user.getAbilities().creativeMode) {

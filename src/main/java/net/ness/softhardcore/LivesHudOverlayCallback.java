@@ -4,8 +4,7 @@ import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.util.Identifier;
-import net.ness.softhardcore.component.LivesComponent;
-import net.ness.softhardcore.component.MyComponents;
+import net.ness.softhardcore.util.LivesCacheManager;
 import net.ness.softhardcore.config.MyConfig;
 import net.ness.softhardcore.ui.ScalingSystem;
 
@@ -21,10 +20,10 @@ public class LivesHudOverlayCallback implements HudRenderCallback {
     public void onHudRender(DrawContext drawContext, float v) {
         if (this.client.player == null) return;
 
-        LivesComponent component = MyComponents.LIVES_KEY.get(this.client.player);
-        if (component == null) return;
+        Integer cached = LivesCacheManager.getCachedLives(this.client.player.getUuid());
+        if (cached == null) return;
 
-        int lives = component.getLives();
+        int lives = cached;
         int maxLives = MyConfig.DEFAULT_LIVES;
 
         // Create screen container dimensions

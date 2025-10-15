@@ -26,13 +26,13 @@ public class MyConfig {
     public static final String DEF_BAN_DURATION = "P2D"; // ISO-8601 (2 days)
     public static final int DEF_LIVES_DROPPED = 1;
     public static final String DEF_HEART_DROP_MODE = "NEUTRAL";
-    public static final String DEF_LIFE_REGEN_COOLDOWN = "PT15S"; // ISO-8601 (24 hours)
+    public static final String DEF_LIFE_REGEN_COOLDOWN = "PT24H"; // ISO-8601 (24 hours)
     public static final int DEF_RETURNING_LIVES = 5;
     public static final int DEF_LIVES_GAINED_FROM_HEART = 1;
     public static final int DEF_SCOREBOARD_MAX_ROWS = 5;
     public static final double DEF_PASSIVE_DEATH_HEART_DROP_PROBABILITY = 1.0;
     public static final double DEF_PLAYER_DEATH_HEART_DROP_PROBABILITY = 1.0;
-    public static final int DEF_LIFE_REGEN_CEILING = 23;
+    public static final int DEF_LIFE_REGEN_CEILING = 25;
 
     public static int DEFAULT_LIVES;
     public static Duration BAN_DURATION;

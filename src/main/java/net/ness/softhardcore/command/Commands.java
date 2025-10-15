@@ -12,10 +12,8 @@ import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
-import net.ness.softhardcore.component.LivesComponent;
-import net.ness.softhardcore.component.MyComponents;
+import net.ness.softhardcore.server.LivesService;
 import net.ness.softhardcore.config.MyConfig;
-import net.ness.softhardcore.util.LivesCacheManager;
 
 
 import static net.minecraft.server.command.CommandManager.argument;
@@ -85,8 +83,7 @@ public class Commands {
         ServerCommandSource source = context.getSource();
         ServerPlayerEntity player = source.getPlayerOrThrow();
         
-        LivesComponent component = MyComponents.LIVES_KEY.get(player);
-        int lives = component.getLives();
+        int lives = LivesService.getLives(source.getServer(), player.getUuid());
         
         Text message = Text.literal("You have " + lives + " lives remaining.")
             .formatted(Formatting.GREEN);
@@ -100,16 +97,13 @@ public class Commands {
         ServerPlayerEntity targetPlayer = net.minecraft.command.argument.EntityArgumentType.getPlayer(context, "player");
         int amount = IntegerArgumentType.getInteger(context, "amount");
         
-        LivesComponent component = MyComponents.LIVES_KEY.get(targetPlayer);
-        int oldLives = component.getLives();
+        int oldLives = LivesService.getLives(source.getServer(), targetPlayer.getUuid());
         
         // Ensure lives are set to at least 1 to avoid triggering ban logic
         int actualAmount = Math.max(amount, 1);
-        component.setLives(actualAmount);
-        int newLives = component.getLives();
+        int newLives = LivesService.setLives(source.getServer(), targetPlayer.getUuid(), actualAmount);
         
-        // Update the lives cache for the scoreboard
-        LivesCacheManager.updateLivesCache(targetPlayer.getUuid(), newLives);
+        // Server broadcasts handle client cache updates
         
         // Send feedback to the command executor
         String messageText = "Set " + targetPlayer.getName().getString() + "'s lives from " + oldLives + " to " + newLives + ".";
@@ -131,8 +125,7 @@ public class Commands {
         ServerCommandSource source = context.getSource();
         ServerPlayerEntity targetPlayer = net.minecraft.command.argument.EntityArgumentType.getPlayer(context, "player");
         
-        LivesComponent component = MyComponents.LIVES_KEY.get(targetPlayer);
-        int lives = component.getLives();
+        int lives = LivesService.getLives(source.getServer(), targetPlayer.getUuid());
         
         Text message = Text.literal(targetPlayer.getName().getString() + " has " + lives + " lives remaining.")
             .formatted(Formatting.GREEN);
@@ -293,45 +286,28 @@ public class Commands {
         
         // Set lives for all online players
         for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
-            LivesComponent component = MyComponents.LIVES_KEY.get(player);
-            component.setLives(amount);
+            LivesService.setLives(server, player.getUuid(), amount);
             onlineCount++;
         }
         
-        // Set lives for all offline players (those with saved data)
+        // Set lives for all offline players by scanning playerdata files
         try {
-            // Get all player data files from the world directory
-            java.io.File playerDataDir = new java.io.File(server.getSaveProperties().getLevelName(), "playerdata");
-            if (playerDataDir.exists() && playerDataDir.isDirectory()) {
-                java.io.File[] playerFiles = playerDataDir.listFiles((dir, name) -> name.endsWith(".dat"));
-                if (playerFiles != null) {
-                    for (java.io.File playerFile : playerFiles) {
-                        // Extract UUID from filename (remove .dat extension)
-                        String fileName = playerFile.getName();
-                        String uuidString = fileName.substring(0, fileName.length() - 4);
-                        
+            java.nio.file.Path runDir = server.getRunDirectory().toPath();
+            java.nio.file.Path worldDir = runDir.resolve(server.getSaveProperties().getLevelName());
+            java.nio.file.Path playerDataPath = worldDir.resolve("playerdata");
+            if (java.nio.file.Files.isDirectory(playerDataPath)) {
+                try (java.util.stream.Stream<java.nio.file.Path> stream = java.nio.file.Files.list(playerDataPath)) {
+                    java.util.List<java.nio.file.Path> files = stream.filter(p -> p.getFileName().toString().endsWith(".dat")).toList();
+                    for (java.nio.file.Path p : files) {
+                        String name = p.getFileName().toString();
+                        String uuidStr = name.substring(0, name.length() - 4);
                         try {
-                            java.util.UUID playerUuid = java.util.UUID.fromString(uuidString);
-                            
-                            // Check if this player is not currently online
-                            if (server.getPlayerManager().getPlayer(playerUuid) == null) {
-                                // Create a temporary player entity to access their component data
-                                // This is a bit of a hack, but it's the only way to access offline player data
-                                com.mojang.authlib.GameProfile profile = new com.mojang.authlib.GameProfile(playerUuid, "temp");
-                                ServerPlayerEntity tempPlayer = server.getPlayerManager().createPlayer(profile);
-                                if (tempPlayer != null) {
-                                    LivesComponent component = MyComponents.LIVES_KEY.get(tempPlayer);
-                                    component.setLives(amount);
-                                    offlineCount++;
-                                    
-                                    // Remove the temporary player
-                                    server.getPlayerManager().remove(tempPlayer);
-                                }
+                            java.util.UUID uuid = java.util.UUID.fromString(uuidStr);
+                            if (server.getPlayerManager().getPlayer(uuid) == null) {
+                                net.ness.softhardcore.server.LivesStore.get(server).setLives(uuid, amount);
+                                offlineCount++;
                             }
-                        } catch (IllegalArgumentException e) {
-                            // Skip invalid UUID files
-                            continue;
-                        }
+                        } catch (IllegalArgumentException ignored) {}
                     }
                 }
             }

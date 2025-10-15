@@ -7,12 +7,9 @@ import net.minecraft.client.render.entity.EntityRenderDispatcher;
 import net.minecraft.client.network.AbstractClientPlayerEntity;
 import net.minecraft.client.render.entity.PlayerEntityRenderer;
 import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.text.Text;
 //import net.minecraft.util.math.RotationAxis;
-import net.ness.softhardcore.component.LivesComponent;
-import net.ness.softhardcore.component.MyComponents;
-import net.ness.softhardcore.config.MyConfig;
+import net.ness.softhardcore.util.LivesCacheManager;
 import org.joml.Matrix4f;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -24,15 +21,15 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
         @Inject(method = "renderLabelIfPresent", at = @At("TAIL"))
         private void renderExtraNametag(AbstractClientPlayerEntity player, Text text, MatrixStack matrices, VertexConsumerProvider vertexConsumers, int light, CallbackInfo ci) {
-            LivesComponent component = MyComponents.LIVES_KEY.get(player);
-            if (component == null) return; 
+            Integer cached = LivesCacheManager.getCachedLives(player.getUuid());
+            if (cached == null) return; 
 
             // Get the dispatcher and text renderer from MinecraftClient
             MinecraftClient client = MinecraftClient.getInstance();
             EntityRenderDispatcher dispatcher = client.getEntityRenderDispatcher();
             TextRenderer textRenderer = client.textRenderer;
             
-            int lives = component.getLives();
+            int lives = cached;
             int armor = player.getArmor();
             String heartSymbol = "\u2764";
             String armorSymbol = "\uD83D\uDEE1"; 

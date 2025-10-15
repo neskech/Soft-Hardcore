@@ -12,8 +12,7 @@ import net.minecraft.text.Text;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.Identifier;
-import net.ness.softhardcore.component.LivesComponent;
-import net.ness.softhardcore.component.MyComponents;
+import net.ness.softhardcore.server.LivesService;
 import net.ness.softhardcore.config.HeartDropMode;
 import net.ness.softhardcore.config.MyConfig;
 import net.ness.softhardcore.event.PlayerDeathCallback;
@@ -31,20 +30,17 @@ public class EventLogic {
     }
 
     private static ActionResult lifeDecrementLogic(ServerPlayerEntity player, DamageSource damageSource) {
-        LivesComponent component = MyComponents.LIVES_KEY.get(player);
-        component.decrement();
-        
-        // Component sync will automatically update the client-side cache
+        int lives = LivesService.decrement(player.getServer(), player.getUuid());
 
         // Only set pending ban if the player's run out of lives
-        if (component.getLives() > 0) {
+        if (lives > 0) {
             Text message = Text.literal("You've just lost a life...").formatted(Formatting.RED);
             player.sendMessage(message);
             return ActionResult.PASS;
         }
 
         // Set pending ban instead of immediately banning
-        component.setPendingBan(true);
+        LivesService.setPendingBan(player.getServer(), player.getUuid(), true);
         Text message = Text.literal("You've run out of lives! You will be banned when you respawn.").formatted(Formatting.RED);
         player.sendMessage(message);
 
@@ -148,12 +144,11 @@ public class EventLogic {
 
     private static void loginEventLogic(ServerPlayNetworkHandler handler, PacketSender p, MinecraftServer m) {
         ServerPlayerEntity player = handler.getPlayer();
-        LivesComponent component = MyComponents.LIVES_KEY.get(player);
 
         // If the player has 0 lives, check if their ban has expired
-        if (component.getLives() <= 0) {
+        if (LivesService.getLives(m, player.getUuid()) <= 0) {
             long currentTime = System.currentTimeMillis();
-            long lastLifeLostTime = component.getLastLifeLostTime();
+            long lastLifeLostTime = net.ness.softhardcore.server.LivesStore.get(m).getLastLifeLostTime(player.getUuid());
             long banDurationMillis = MyConfig.BAN_DURATION.toMillis();
             long timeSinceLifeLost = currentTime - lastLifeLostTime;
             
@@ -168,39 +163,33 @@ public class EventLogic {
             
             // Ban has expired, restore their lives
             // Clear any pending ban flag that might be stuck
-            component.setPendingBan(false);
+            LivesService.setPendingBan(m, player.getUuid(), false);
             
             Text message = Text.literal("Welcome back! Your lives have been refilled.").formatted(Formatting.GREEN);
             player.sendMessage(message);
-            component.setLives(MyConfig.RETURNING_LIVES);
+            LivesService.setLives(m, player.getUuid(), MyConfig.RETURNING_LIVES);
             // Set both timestamps to current time so they don't immediately regenerate
-            component.markBanEndNow();
+            LivesService.markBanEnd(m, player.getUuid());
             
-            // Component sync will automatically update the client-side cache
+            // Broadcasts handle client cache updates
         }
         
-        // Component sync will automatically update the client-side cache
-        
-        // Trigger bulk sync to ensure joining player sees all other players' lives
-        syncAllPlayersLives(m);
+        // Ensure store entry exists and send bulk lives to the joining player
+        int joiningLives = net.ness.softhardcore.server.LivesService.getLives(m, player.getUuid());
+        net.ness.softhardcore.server.LivesService.broadcastBulkTo(player);
+        // Also broadcast the joining player's lives to all clients so existing players see them
+        net.ness.softhardcore.networking.NetworkManager.broadcastLivesOne(m, player.getUuid(), joiningLives);
     }
 
-    private static void syncAllPlayersLives(MinecraftServer server) {
-        // Sync all players' lives to all other players
-        for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
-            MyComponents.LIVES_KEY.sync(player);
-        }
-    }
+    private static void syncAllPlayersLives(MinecraftServer server) {}
 
     /**
      * Handles respawn events - bans players who have pending bans
      */
     private static void respawnEventLogic(ServerPlayerEntity oldPlayer, ServerPlayerEntity newPlayer, boolean alive) {
-        LivesComponent component = MyComponents.LIVES_KEY.get(newPlayer);
-        
-        if (component.isPendingBan()) {
+        if (LivesService.isPendingBan(newPlayer.getServer(), newPlayer.getUuid())) {
             // Clear the pending ban flag
-            component.setPendingBan(false);
+            LivesService.setPendingBan(newPlayer.getServer(), newPlayer.getUuid(), false);
             
             // Now ban the player
             MinecraftServer server = newPlayer.getServer();
@@ -210,8 +199,8 @@ public class EventLogic {
                 return;
             }
 
-            // Store the ban time in the component instead of using Minecraft's ban system
-            component.markBanStartNow();
+            // Store the ban time
+            LivesService.markBanStart(server, newPlayer.getUuid());
             
             // Calculate when the ban will expire (not used directly in message)
             long banDurationMillis = MyConfig.BAN_DURATION.toMillis();
@@ -227,14 +216,12 @@ public class EventLogic {
      */
     private static void disconnectEventLogic(ServerPlayNetworkHandler handler, MinecraftServer server) {
         ServerPlayerEntity player = handler.getPlayer();
-        LivesComponent component = MyComponents.LIVES_KEY.get(player);
-        
-        if (component.isPendingBan()) {
+        if (LivesService.isPendingBan(server, player.getUuid())) {
             // Player disconnected with a pending ban, store the time they lost their life
-            component.markBanStartNow();
+            LivesService.markBanStart(server, player.getUuid());
             
             // Clear the pending ban flag
-            component.setPendingBan(false);
+            LivesService.setPendingBan(server, player.getUuid(), false);
             
             server.sendMessage(Text.literal("Player " + player.getName() + " disconnected with pending ban"));
         }

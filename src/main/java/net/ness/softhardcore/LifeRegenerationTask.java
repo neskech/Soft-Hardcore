@@ -7,12 +7,11 @@ import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
-import net.ness.softhardcore.component.LivesComponent;
-import net.ness.softhardcore.component.MyComponents;
+import net.ness.softhardcore.server.LivesService;
 
 public class LifeRegenerationTask {
     private static long lastCheckTime = 0;
-    private static final int CHECK_SECONDS = 1;//60 * 5; // 5 minutes
+    private static final int CHECK_SECONDS = 60 * 5; // 5 minutes
     private static final long CHECK_INTERVAL = 20 * CHECK_SECONDS; // Check every 5 minutes
 
     public static void register() {
@@ -31,23 +30,14 @@ public class LifeRegenerationTask {
         
         // Check all online players for life regeneration
         for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
-            LivesComponent component = MyComponents.LIVES_KEY.get(player);
-            
-            // Debug logging
-
-            int regenerationAmount = component.tryRegenerateLife();
+            int regenerationAmount = LivesService.tryRegenerate(server, player.getUuid());
             if (regenerationAmount > 0) {
-                // Player regenerated a life
-                int currentLives = component.getLives();
-                SoftHardcore.LOGGER.info("Player " + player.getName() + " can regenerate life. Current lives: " + component.getLives());
-                
-                // Play sound effect (same as heart consumption)
+                int currentLives = LivesService.getLives(server, player.getUuid());
+                SoftHardcore.LOGGER.info("Player " + player.getName() + " can regenerate life. Current lives: " + currentLives);
                 player.getWorld().playSound(null, player.getX(), player.getY(), player.getZ(), 
                     SoundEvents.ENTITY_PLAYER_LEVELUP, SoundCategory.PLAYERS, 1.0f, 1.2f);
-                
-                // Send message to player
                 String messageText = regenerationAmount == 1 ? 
-                    "You have regenerated a life!":
+                    "You have regenerated a life!" :
                     "You have regenerated " + regenerationAmount + " lives!";
                 Text message = Text.literal(messageText).formatted(Formatting.GREEN);
                 player.sendMessage(message);

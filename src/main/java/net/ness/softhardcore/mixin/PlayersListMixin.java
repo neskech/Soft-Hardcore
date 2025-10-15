@@ -17,9 +17,7 @@ import net.minecraft.scoreboard.Team;
 import net.minecraft.util.Identifier;
 import net.ness.softhardcore.SoftHardcore;
 import net.ness.softhardcore.SoftHardcoreClient;
-import net.ness.softhardcore.component.LivesComponent;
 import net.ness.softhardcore.util.LivesCacheManager;
-import net.ness.softhardcore.component.MyComponents;
 import net.ness.softhardcore.ui.ScalingSystem;
 import net.ness.softhardcore.config.MyConfig;
 import org.jetbrains.annotations.NotNull;
@@ -232,36 +230,10 @@ public abstract class PlayersListMixin {
         String lives = "?";
         UUID playerUuid = profile.getId();
         
-        // Try to get lives data from the world player first (if alive)
-        PlayerEntity p = map.get(profile.getName());
-        if (p != null) {
-            LivesComponent comp = MyComponents.LIVES_KEY.get(p);
-            if (comp != null) {
-                int l = comp.getLives();
-                lives = String.valueOf(l);
-                // Update cache with current lives data
-                LivesCacheManager.updateLivesCache(playerUuid, l);
-            }
-        } else {
-            // If player is not in world (dead), try to get lives data from cache
-            Integer cachedLives = LivesCacheManager.getCachedLives(playerUuid);
-            if (cachedLives != null) {
-                lives = String.valueOf(cachedLives);
-            } else {
-                // If not in cache, try to get from client world (fallback)
-                ClientWorld world = this.client().world;
-                if (world != null) {
-                    PlayerEntity deadPlayer = world.getPlayerByUuid(playerUuid);
-                    if (deadPlayer != null) {
-                        LivesComponent comp = MyComponents.LIVES_KEY.get(deadPlayer);
-                        if (comp != null) {
-                            int l = comp.getLives();
-                            lives = String.valueOf(l);
-                            LivesCacheManager.updateLivesCache(playerUuid, l);
-                        }
-                    }
-                }
-            }
+        // Read lives from client cache populated via packets
+        Integer cachedLives = LivesCacheManager.getCachedLives(playerUuid);
+        if (cachedLives != null) {
+            lives = String.valueOf(cachedLives);
         }
 
         int healthColor = 0xDC143C; // Crimson red

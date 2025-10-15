@@ -27,6 +27,8 @@ public class SoftHardcore implements ModInitializer {
 		EventLogic.registerEventLogic();
 		ModItems.ReigsterModItems();
 		LifeRegenerationTask.register();
+		// Networking
+		net.ness.softhardcore.networking.NetworkManager.registerClientToServerPackets();
 		
 		// Register commands
 		CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {

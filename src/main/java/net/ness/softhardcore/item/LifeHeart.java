@@ -6,8 +6,8 @@ import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.Text;
 import net.minecraft.util.*;
 import net.minecraft.world.World;
-import net.ness.softhardcore.component.LivesComponent;
-import net.ness.softhardcore.component.MyComponents;
+import net.ness.softhardcore.config.MyConfig;
+import net.ness.softhardcore.server.LivesService;
 
 public class LifeHeart extends Item {
 
@@ -21,11 +21,8 @@ public class LifeHeart extends Item {
             return TypedActionResult.pass(user.getStackInHand(hand));
 
         ServerPlayerEntity player = (ServerPlayerEntity) user;
-        LivesComponent component = MyComponents.LIVES_KEY.get(player);
-
-        int livesBefore = component.getLives();
-        component.increment();
-        int livesAfter = component.getLives();
+        int livesBefore = net.ness.softhardcore.server.LivesService.getLives(player.getServer(), player.getUuid());
+        int livesAfter = net.ness.softhardcore.server.LivesService.increment(player.getServer(), player.getUuid());
 
         if (livesBefore == livesAfter) {
             Text message = Text.literal("You're already have the maximum number of lives").formatted(Formatting.GREEN);
