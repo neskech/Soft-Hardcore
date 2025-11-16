@@ -214,7 +214,13 @@ public abstract class PlayersListMixin {
 
         x += iconSize + iconMarginSize;
         Team team = scoreboard.getPlayerTeam(profile.getName());
-        int color = (team != null && team.getColor() != null) ? team.getColor().getColorValue() : 0xFFFFFF;
+        int color = 0xFFFFFF; // Default to white
+        if (team != null && team.getColor() != null) {
+            Integer colorValue = team.getColor().getColorValue();
+            if (colorValue != null) {
+                color = colorValue;
+            }
+        }
         
         setShaderColor(color);
         ctx.drawTexture(TEAM_ICON, x, y, iconSize, iconSize, 0, 0, TEAM_ICON_TEX_DIMENSIONS.x, TEAM_ICON_TEX_DIMENSIONS.y, TEAM_ICON_TEX_DIMENSIONS.x, TEAM_ICON_TEX_DIMENSIONS.y);
