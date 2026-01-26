@@ -6,6 +6,7 @@ import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
+import com.mojang.authlib.GameProfile;
 import net.minecraft.command.CommandRegistryAccess;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.command.ServerCommandSource;
@@ -14,6 +15,9 @@ import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 import net.ness.softhardcore.server.LivesService;
 import net.ness.softhardcore.config.MyConfig;
+
+import java.util.Collection;
+import java.util.UUID;
 
 
 import static net.minecraft.server.command.CommandManager.argument;
@@ -76,7 +80,11 @@ public class Commands {
                         .executes(Commands::setConfigCommand))))
             .then(literal("reloadconfig")
                 .requires(source -> source.hasPermissionLevel(2)) // Admin only
-                .executes(Commands::reloadConfigCommand)));
+                .executes(Commands::reloadConfigCommand))
+            .then(literal("unban")
+                .requires(source -> source.hasPermissionLevel(2)) // Admin only (level 2+)
+                .then(argument("player", net.minecraft.command.argument.GameProfileArgumentType.gameProfile())
+                    .executes(Commands::unbanCommand))));
     }
     
     private static int getLivesCommandSelf(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
@@ -320,6 +328,58 @@ public class Commands {
         String message = String.format("Set lives to %d for %d online players and %d offline players", 
                                      amount, onlineCount, offlineCount);
         source.sendFeedback(() -> Text.literal(message).formatted(Formatting.GREEN), true);
+        
+        return 1;
+    }
+    
+    private static int unbanCommand(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
+        ServerCommandSource source = context.getSource();
+        MinecraftServer server = source.getServer();
+        
+        // Get the GameProfile from the argument
+        Collection<GameProfile> profiles = net.minecraft.command.argument.GameProfileArgumentType.getProfileArgument(context, "player");
+        
+        if (profiles.isEmpty()) {
+            source.sendError(Text.literal("No player found"));
+            return 0;
+        }
+        
+        GameProfile targetProfile = profiles.iterator().next();
+        UUID targetUuid = targetProfile.getId();
+        String targetName = targetProfile.getName();
+        
+        // Check if player is online
+        ServerPlayerEntity onlinePlayer = server.getPlayerManager().getPlayer(targetUuid);
+        
+        // Get current lives before unbanning
+        int oldLives = LivesService.getLives(server, targetUuid);
+        
+        // Check if player is actually banned (lives <= 0)
+        if (oldLives > 0) {
+            source.sendError(Text.literal(targetName + " is not banned (has " + oldLives + " lives)."));
+            return 0;
+        }
+        
+        // Set lives to returning lives
+        int newLives = LivesService.setLives(server, targetUuid, MyConfig.RETURNING_LIVES);
+        
+        // Clear pending ban flag
+        LivesService.setPendingBan(server, targetUuid, false);
+        
+        // Reset ban timestamps (effectively makes ban duration 0)
+        LivesService.markBanEnd(server, targetUuid);
+        
+        // Send feedback to command executor
+        String messageText = "Unbanned " + targetName + ". Lives set from " + oldLives + " to " + newLives + ".";
+        Text message = Text.literal(messageText).formatted(Formatting.GREEN);
+        source.sendFeedback(() -> message, true);
+        
+        // Send message to the target player if they're online
+        if (onlinePlayer != null) {
+            Text playerMessage = Text.literal("You have been unbanned! Your lives have been restored to " + newLives + ".")
+                .formatted(Formatting.GREEN);
+            onlinePlayer.sendMessage(playerMessage, false);
+        }
         
         return 1;
     }

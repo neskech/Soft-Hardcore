@@ -4,7 +4,6 @@ A soft-hardcore, highly configurable Minecraft mod that gives each player a limi
 
 The mod also provides some minor UI reworks, lives and armor information now appear on top of nameplates and the number of lives reminaing on a player while checking the scoreboard, compatable with teams, alongside a couple of other minor scoreboard enhancements.
 
-
 ## ✨ Features
 
 - **Limited Lives System**: Each player starts with a configurable number of lives
@@ -24,23 +23,27 @@ The mod also provides some minor UI reworks, lives and armor information now app
 ## 🆕 Recent Improvements
 
 ### Enhanced Life Regeneration
+
 - **Multiple Interval Support**: If 3 hours pass and the cooldown is 1 hour, players get 3 regenerations at once
 - **Automatic Timestamp Management**: Life lost and regeneration times are automatically tracked
 - **Improved Logic**: More reliable regeneration system with proper anchor time handling
 
 ### Runtime Configuration System
+
 - **In-Game Config Editing**: Modify any config value without server restart
 - **Autocomplete Support**: Tab completion for all config keys
 - **Validation**: Input validation with helpful error messages
 - **Persistence**: Changes are saved to the config file immediately
 
 ### Enhanced Commands
+
 - **Unified Command Structure**: All commands prefixed with `/softhardcore`
 - **Bulk Operations**: Set lives for all players (online and offline) at once
 - **Better Feedback**: Detailed confirmation messages for all operations
 - **Admin Tools**: Comprehensive admin command suite
 
 ### Improved User Experience
+
 - **Human-Readable Durations**: Ban messages show "2 days, 3 hours" instead of raw seconds
 - **Better Config Format**: Comments above config lines for cleaner editing
 - **Robust Error Handling**: Graceful handling of invalid config values
@@ -53,8 +56,6 @@ This mod requires the following dependencies to function properly:
 | Dependency | Version | Description |
 |------------|---------|-------------|
 | **Cardinal Components API** | 5.2.3 | Used for the lives component system |
-
-
 
 ## ⚙️ Configuration
 
@@ -84,7 +85,7 @@ The mod includes a probability system for heart drops that works alongside the h
 - **`player.death.heart.drop.probability`**: Controls the chance of dropping hearts on player kills
 - **Values**: Range from 0.0 (never drop) to 1.0 (always drop)
 - **Mode Override**: If a heart drop mode (like NEVER) disables drops, probabilities are ignored
-- **Examples**: 
+- **Examples**:
   - `0.5` = 50% chance of dropping hearts
   - `0.25` = 25% chance of dropping hearts
   - `1.0` = 100% chance (always drop, default behavior)
@@ -155,32 +156,43 @@ All commands are prefixed with `/softhardcore` for better organization.
 ### Player Commands
 
 #### `/softhardcore getlives [player]`
+
 - **Description**: Check remaining lives (your own or another player's)
 - **Permission**: Available to all players
-- **Usage**: 
+- **Usage**:
   - `/softhardcore getlives` - Check your own lives
   - `/softhardcore getlives <player>` - Check another player's lives
-- **Example**: 
+- **Example**:
   - Shows "You have 2 lives remaining."
   - `/softhardcore getlives Steve` shows "Steve has 1 lives remaining."
-
 
 ### Admin Commands
 
 #### `/softhardcore getConfig`
+
 - **Description**: View all current configuration values
 - **Permission**: Requires operator level 2+ (admin only)
 - **Usage**: `/softhardcore getConfig`
 - **Example**: Shows all config options with their current values
 
 #### `/softhardcore setlives <player> <amount>`
+
 - **Description**: Set a specific player's lives to a specific amount
 - **Permission**: Requires operator level 2+ (admin only)
 - **Usage**: `/softhardcore setlives <player> <amount>`
 - **Example**: `/softhardcore setlives Alex 5` sets Alex's lives to 5
 - **Note**: Lives can be set between 0 and the maximum configured lives
 
+#### `/softhardcore unban <player>`
+
+- **Description**: Unban a player who has run out of lives
+- **Permission**: Requires operator level 2+ (admin only)
+- **Usage**: `/softhardcore unban <player>`
+- **Example**: `/softhardcore unban Steve` unbans Steve and restores their lives
+- **Note**: Only works on players who are currently banned (have 0 lives). If the player is not banned, the command will return an error.
+
 #### `/softhardcore setalllives <amount>`
+
 - **Description**: Set all players' lives to a specific amount (both online and offline)
 - **Permission**: Requires operator level 2+ (admin only)
 - **Usage**: `/softhardcore setalllives <amount>`
@@ -192,6 +204,7 @@ All commands are prefixed with `/softhardcore` for better organization.
   - Perfect for server resets or event management
 
 #### `/softhardcore setconfig <key> <value>`
+
 - **Description**: Modify a configuration value at runtime
 - **Permission**: Requires operator level 2+ (admin only)
 - **Usage**: `/softhardcore setconfig <key> <value>`
@@ -204,6 +217,7 @@ All commands are prefixed with `/softhardcore` for better organization.
 - **Available Keys**: All configuration options (see [Configuration](#-configuration))
 
 #### `/softhardcore reloadconfig`
+
 - **Description**: Reload the configuration file from disk
 - **Permission**: Requires operator level 2+ (admin only)
 - **Usage**: `/softhardcore reloadconfig`
@@ -213,6 +227,7 @@ All commands are prefixed with `/softhardcore` for better organization.
 ## 🎯 Gameplay Mechanics
 
 ### Life System
+
 - Players start with a configurable number of lives (default: 25)
 - Each death reduces lives by 1
 - When lives reach 0, the player is temporarily banned
@@ -220,12 +235,14 @@ All commands are prefixed with `/softhardcore` for better organization.
 - Lives are automatically managed with proper timestamp tracking
 
 ### Life Hearts
+
 - Life hearts are special items that can restore lives
 - Players drop life hearts when they die (based on heart drop mode)
 - Right-click to consume a life heart and gain lives
 - Life hearts can be given to other players or used on yourself
 
 ### Ban System
+
 - When a player runs out of lives, they are temporarily banned
 - Ban duration is configurable (default: 2 days)
 - Players can rejoin after the ban expires
@@ -233,6 +250,7 @@ All commands are prefixed with `/softhardcore` for better organization.
 - Ban messages show human-readable duration (e.g., "2 days, 3 hours, 15 minutes")
 
 ### Life Regeneration
+
 - Lives can automatically regenerate over time
 - Regeneration cooldown is configurable (default: 24 hours)
 - **Multiple Interval Support**: If multiple cooldown periods have passed, all pending regenerations are applied at once
@@ -246,31 +264,37 @@ All commands are prefixed with `/softhardcore` for better organization.
 The mod supports different modes for when life hearts are dropped:
 
 ### PASSIVE
+
 - **Description**: Drop hearts only on natural deaths (not player kills)
 - **Use Case**: PvE-focused servers where PvP is discouraged
 - **Example**: Dying to mobs drops hearts, but PvP deaths don't
 
 ### NEUTRAL (Default)
+
 - **Description**: Drop hearts on any death
 - **Use Case**: Balanced gameplay where all deaths matter equally
 - **Example**: All deaths drop hearts regardless of cause
 
 ### TEAM
+
 - **Description**: Drop hearts on natural deaths + when killed by different team players
 - **Use Case**: Team-based gameplay with friendly fire disabled
 - **Example**: Natural deaths and enemy team kills drop hearts, same team kills don't
 
 ### COMPETITIVE
+
 - **Description**: Drop hearts ONLY when killed by different team players
 - **Use Case**: Competitive team-based gameplay
 - **Example**: Only enemy team kills drop hearts, natural deaths don't
 
 ### VENGEFUL
+
 - **Description**: Drop hearts ONLY when killed by another player (any player, regardless of team)
 - **Use Case**: PvP-focused gameplay where only player kills matter
 - **Example**: Any player kill drops hearts, natural deaths don't (team doesn't matter)
 
 ### NEVER
+
 - **Description**: Never drop hearts
 - **Use Case**: Admin-controlled lives or special game modes
 - **Example**: No hearts are ever dropped, lives must be managed by admins
@@ -278,6 +302,7 @@ The mod supports different modes for when life hearts are dropped:
 ## 🎨 Visual Features
 
 ### Nametag Overlay
+
 - Custom nametag display above player heads showing lives and armor
 - Red heart icon followed by the number of remaining lives
 - Blue droplet/diamond icon followed by armor points
@@ -285,10 +310,10 @@ The mod supports different modes for when life hearts are dropped:
 - Only visible to other players (not yourself)
 
 ### Scoreboard Integration
+
 - Lives are displayed next to player names in the player list
 - Shows lives for all players (including dead/banned players)
 - Configurable maximum number of players shown
-
 
 ## 📄 License
 
@@ -302,5 +327,3 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## 🔗 Links
 
 - [GitHub Repository](https://github.com/neskech/Soft-Hardcore)
-
-
