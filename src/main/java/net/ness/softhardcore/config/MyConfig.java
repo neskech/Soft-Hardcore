@@ -20,6 +20,7 @@ public class MyConfig {
     public static final String KEY_PASSIVE_DEATH_HEART_DROP_PROBABILITY = "passive.death.heart.drop.probability";
     public static final String KEY_PLAYER_DEATH_HEART_DROP_PROBABILITY = "player.death.heart.drop.probability";
     public static final String KEY_LIFE_REGEN_CEILING = "life.regen.ceiling";
+    public static final String KEY_INVENTORY_LIVES_OVERLAY = "inventory.lives.overlay.enabled";
 
     // Defaults (single source of truth)
     public static final int DEF_DEFAULT_LIVES = 25;
@@ -33,6 +34,7 @@ public class MyConfig {
     public static final double DEF_PASSIVE_DEATH_HEART_DROP_PROBABILITY = 1.0;
     public static final double DEF_PLAYER_DEATH_HEART_DROP_PROBABILITY = 1.0;
     public static final int DEF_LIFE_REGEN_CEILING = 25;
+    public static final boolean DEF_INVENTORY_LIVES_OVERLAY = true;
 
     public static int DEFAULT_LIVES;
     public static Duration BAN_DURATION;
@@ -45,6 +47,7 @@ public class MyConfig {
     public static double PASSIVE_DEATH_HEART_DROP_PROBABILITY;
     public static double PLAYER_DEATH_HEART_DROP_PROBABILITY;
     public static int LIFE_REGEN_CEILING;
+    public static boolean INVENTORY_LIVES_OVERLAY_ENABLED;
 
     public static void registerConfig() {
         BasicConfigProvider provider = new BasicConfigProvider();
@@ -65,6 +68,7 @@ public class MyConfig {
         provider.addKeyValuePair(new Pair<>(KEY_PASSIVE_DEATH_HEART_DROP_PROBABILITY, DEF_PASSIVE_DEATH_HEART_DROP_PROBABILITY), "Double (0.0-1.0, probability of dropping hearts on natural deaths)");
         provider.addKeyValuePair(new Pair<>(KEY_PLAYER_DEATH_HEART_DROP_PROBABILITY, DEF_PLAYER_DEATH_HEART_DROP_PROBABILITY), "Double (0.0-1.0, probability of dropping hearts on player kills)");
         provider.addKeyValuePair(new Pair<>(KEY_LIFE_REGEN_CEILING, DEF_LIFE_REGEN_CEILING), "Int (lives at or above this won't regenerate)");
+        provider.addKeyValuePair(new Pair<>(KEY_INVENTORY_LIVES_OVERLAY, DEF_INVENTORY_LIVES_OVERLAY), "Boolean (show remaining lives in the inventory screen)");
     }
 
     private static void assignClassDefaults() {
@@ -118,6 +122,8 @@ public class MyConfig {
         // Validate regeneration ceiling (1 to default lives)
         int regenCeiling = CONFIG.getOrDefault(KEY_LIFE_REGEN_CEILING, DEF_LIFE_REGEN_CEILING);
         LIFE_REGEN_CEILING = Math.max(1, Math.min(regenCeiling, DEFAULT_LIVES));
+
+        INVENTORY_LIVES_OVERLAY_ENABLED = CONFIG.getOrDefault(KEY_INVENTORY_LIVES_OVERLAY, DEF_INVENTORY_LIVES_OVERLAY);
     }
 
     /**

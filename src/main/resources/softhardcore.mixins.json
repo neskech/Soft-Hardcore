@@ -5,7 +5,9 @@
   "mixins": [
     "PlayerDeathMixin",
     "PlayersListMixin",
-    "NametagMixin"
+    "NametagMixin",
+    "HandledScreenAccessor",
+    "InventoryScreenMixin"
   ],
 	"injectors": {
 		"defaultRequire": 1

@@ -41,7 +41,8 @@ public class Commands {
             MyConfig.KEY_SCOREBOARD_MAX_ROWS,
             MyConfig.KEY_PASSIVE_DEATH_HEART_DROP_PROBABILITY,
             MyConfig.KEY_PLAYER_DEATH_HEART_DROP_PROBABILITY,
-            MyConfig.KEY_LIFE_REGEN_CEILING
+            MyConfig.KEY_LIFE_REGEN_CEILING,
+            MyConfig.KEY_INVENTORY_LIVES_OVERLAY
         };
         
         // Filter and suggest matching keys
@@ -160,6 +161,7 @@ public class Commands {
         source.sendFeedback(() -> Text.literal("Passive Death Heart Drop Probability: " + MyConfig.PASSIVE_DEATH_HEART_DROP_PROBABILITY).formatted(Formatting.WHITE), false);
         source.sendFeedback(() -> Text.literal("Player Death Heart Drop Probability: " + MyConfig.PLAYER_DEATH_HEART_DROP_PROBABILITY).formatted(Formatting.WHITE), false);
         source.sendFeedback(() -> Text.literal("Life Regeneration Ceiling: " + MyConfig.LIFE_REGEN_CEILING).formatted(Formatting.WHITE), false);
+        source.sendFeedback(() -> Text.literal("Inventory Lives Overlay: " + MyConfig.INVENTORY_LIVES_OVERLAY_ENABLED).formatted(Formatting.WHITE), false);
         
         return 1;
     }
@@ -221,7 +223,8 @@ public class Commands {
                key.equals(MyConfig.KEY_SCOREBOARD_MAX_ROWS) ||
                key.equals(MyConfig.KEY_PASSIVE_DEATH_HEART_DROP_PROBABILITY) ||
                key.equals(MyConfig.KEY_PLAYER_DEATH_HEART_DROP_PROBABILITY) ||
-               key.equals(MyConfig.KEY_LIFE_REGEN_CEILING);
+               key.equals(MyConfig.KEY_LIFE_REGEN_CEILING) ||
+               key.equals(MyConfig.KEY_INVENTORY_LIVES_OVERLAY);
     }
     
     private static String validateConfigValue(String key, String value) {
@@ -270,6 +273,12 @@ public class Commands {
                     double doubleVal = Double.parseDouble(value);
                     if (doubleVal < 0.0 || doubleVal > 1.0) {
                         return "Must be between 0.0 and 1.0";
+                    }
+                    break;
+
+                case MyConfig.KEY_INVENTORY_LIVES_OVERLAY:
+                    if (!value.equalsIgnoreCase("true") && !value.equalsIgnoreCase("false")) {
+                        return "Must be true or false";
                     }
                     break;
             }

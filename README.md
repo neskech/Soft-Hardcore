@@ -76,6 +76,7 @@ The mod creates a configuration file at `config/softhardcoreconfig.properties` w
 | `passive.death.heart.drop.probability` | Double | `1.0` | Probability of dropping hearts on natural deaths (0.0-1.0) |
 | `player.death.heart.drop.probability` | Double | `1.0` | Probability of dropping hearts on player kills (0.0-1.0) |
 | `life.regen.ceiling` | Integer | `25` | Lives at or above this value will not regenerate |
+| `inventory.lives.overlay.enabled` | Boolean | `true` | Show remaining lives in the survival inventory screen |
 
 ### Probability System
 
@@ -147,6 +148,9 @@ player.death.heart.drop.probability=1.0
 
 # Lives at or above this value will not regenerate
 life.regen.ceiling=25
+
+# Show remaining lives below the crafting output in the inventory screen
+inventory.lives.overlay.enabled=true
 ```
 
 ## 🎮 Commands
@@ -314,6 +318,12 @@ The mod supports different modes for when life hearts are dropped:
 - Lives are displayed next to player names in the player list
 - Shows lives for all players (including dead/banned players)
 - Configurable maximum number of players shown
+
+### Inventory Lives Overlay
+
+- Shows your remaining lives in the survival inventory screen
+- Displayed below the crafting output slot with a heart icon and life count
+- Can be enabled or disabled via `inventory.lives.overlay.enabled`
 
 ## 📄 License
 
