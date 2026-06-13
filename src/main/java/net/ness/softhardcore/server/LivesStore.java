@@ -1,9 +1,8 @@
 package net.ness.softhardcore.server;
 
+import net.minecraft.datafixer.DataFixTypes;
 import net.minecraft.nbt.NbtCompound;
-import net.minecraft.nbt.NbtElement;
-import net.minecraft.nbt.NbtInt;
-import net.minecraft.nbt.NbtLong;
+import net.minecraft.registry.RegistryWrapper;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.PersistentState;
 import net.minecraft.world.PersistentStateManager;
@@ -15,114 +14,134 @@ import java.util.UUID;
 
 public class LivesStore extends PersistentState {
 
-	private final Map<UUID, Integer> lives = new HashMap<>();
-	private final Map<UUID, Long> lastLifeLostTime = new HashMap<>();
-	private final Map<UUID, Long> lastLifeRegenTime = new HashMap<>();
-	private final Map<UUID, Boolean> pendingBan = new HashMap<>();
+    private static final Type<LivesStore> TYPE = new Type<>(
+            LivesStore::new,
+            LivesStore::fromNbt,
+            DataFixTypes.LEVEL
+    );
 
-	public static LivesStore get(MinecraftServer server) {
-		PersistentStateManager mgr = server.getOverworld().getPersistentStateManager();
-		return mgr.getOrCreate(LivesStore::fromNbt, LivesStore::new, "softhardcore_lives");
-	}
+    private final Map<UUID, Integer> lives = new HashMap<>();
+    private final Map<UUID, Long> lastLifeLostTime = new HashMap<>();
+    private final Map<UUID, Long> lastLifeRegenTime = new HashMap<>();
+    private final Map<UUID, Boolean> pendingBan = new HashMap<>();
 
-	public int getLives(UUID uuid) {
-		return lives.computeIfAbsent(uuid, u -> MyConfig.DEFAULT_LIVES);
-	}
+    public static LivesStore get(MinecraftServer server) {
+        PersistentStateManager manager = server.getOverworld().getPersistentStateManager();
+        return manager.getOrCreate(TYPE, "softhardcore_lives");
+    }
 
-	public void setLives(UUID uuid, int amount) {
-		int clamped = Math.max(Math.min(amount, MyConfig.DEFAULT_LIVES), 0);
-		lives.put(uuid, clamped);
-		markDirty();
-	}
+    public int getLives(UUID uuid) {
+        if (!lives.containsKey(uuid)) {
+            lives.put(uuid, MyConfig.DEFAULT_LIVES);
+            markDirty();
+            return MyConfig.DEFAULT_LIVES;
+        }
+        return lives.get(uuid);
+    }
 
-	public long getLastLifeLostTime(UUID uuid) {
-		return lastLifeLostTime.getOrDefault(uuid, 0L);
-	}
+    /** Returns stored lives, or -1 if this UUID has never been tracked. Does not insert defaults. */
+    public int peekLives(UUID uuid) {
+        return lives.getOrDefault(uuid, -1);
+    }
 
-	public void setLastLifeLostTime(UUID uuid, long ts) {
-		lastLifeLostTime.put(uuid, ts);
-		markDirty();
-	}
+    public boolean hasRecord(UUID uuid) {
+        return lives.containsKey(uuid);
+    }
 
-	public long getLastLifeRegenTime(UUID uuid) {
-		return lastLifeRegenTime.getOrDefault(uuid, 0L);
-	}
+    public void setLives(UUID uuid, int amount) {
+        int clamped = Math.max(Math.min(amount, MyConfig.DEFAULT_LIVES), 0);
+        lives.put(uuid, clamped);
+        markDirty();
+    }
 
-	public void setLastLifeRegenTime(UUID uuid, long ts) {
-		lastLifeRegenTime.put(uuid, ts);
-		markDirty();
-	}
+    public long getLastLifeLostTime(UUID uuid) {
+        return lastLifeLostTime.getOrDefault(uuid, 0L);
+    }
 
-	public boolean isPendingBan(UUID uuid) {
-		return pendingBan.getOrDefault(uuid, false);
-	}
+    public void setLastLifeLostTime(UUID uuid, long ts) {
+        lastLifeLostTime.put(uuid, ts);
+        markDirty();
+    }
 
-	public void setPendingBan(UUID uuid, boolean value) {
-		pendingBan.put(uuid, value);
-		markDirty();
-	}
+    public long getLastLifeRegenTime(UUID uuid) {
+        return lastLifeRegenTime.getOrDefault(uuid, 0L);
+    }
 
-	public Map<UUID, Integer> snapshotLives() {
-		return new HashMap<>(lives);
-	}
+    public void setLastLifeRegenTime(UUID uuid, long ts) {
+        lastLifeRegenTime.put(uuid, ts);
+        markDirty();
+    }
 
-	@Override
-	public NbtCompound writeNbt(NbtCompound nbt) {
-		NbtCompound livesNbt = new NbtCompound();
-		for (Map.Entry<UUID, Integer> e : lives.entrySet()) {
-			livesNbt.put(e.getKey().toString(), NbtInt.of(e.getValue()));
-		}
-		nbt.put("lives", livesNbt);
+    public boolean isPendingBan(UUID uuid) {
+        return pendingBan.getOrDefault(uuid, false);
+    }
 
-		NbtCompound lostNbt = new NbtCompound();
-		for (Map.Entry<UUID, Long> e : lastLifeLostTime.entrySet()) {
-			lostNbt.put(e.getKey().toString(), NbtLong.of(e.getValue()));
-		}
-		nbt.put("lastLifeLostTime", lostNbt);
+    public void setPendingBan(UUID uuid, boolean value) {
+        pendingBan.put(uuid, value);
+        markDirty();
+    }
 
-		NbtCompound regenNbt = new NbtCompound();
-		for (Map.Entry<UUID, Long> e : lastLifeRegenTime.entrySet()) {
-			regenNbt.put(e.getKey().toString(), NbtLong.of(e.getValue()));
-		}
-		nbt.put("lastLifeRegenTime", regenNbt);
+    public Map<UUID, Integer> snapshotLives() {
+        return new HashMap<>(lives);
+    }
 
-		NbtCompound pendingNbt = new NbtCompound();
-		for (Map.Entry<UUID, Boolean> e : pendingBan.entrySet()) {
-			pendingNbt.putBoolean(e.getKey().toString(), e.getValue());
-		}
-		nbt.put("pendingBan", pendingNbt);
+    @Override
+    public NbtCompound writeNbt(NbtCompound nbt, RegistryWrapper.WrapperLookup registryLookup) {
+        NbtCompound livesNbt = new NbtCompound();
+        for (Map.Entry<UUID, Integer> entry : lives.entrySet()) {
+            livesNbt.putInt(entry.getKey().toString(), entry.getValue());
+        }
+        nbt.put("lives", livesNbt);
 
-		return nbt;
-	}
+        NbtCompound lostNbt = new NbtCompound();
+        for (Map.Entry<UUID, Long> entry : lastLifeLostTime.entrySet()) {
+            lostNbt.putLong(entry.getKey().toString(), entry.getValue());
+        }
+        nbt.put("lastLifeLostTime", lostNbt);
 
-	public static LivesStore fromNbt(NbtCompound nbt) {
-		LivesStore store = new LivesStore();
-		if (nbt.contains("lives", NbtElement.COMPOUND_TYPE)) {
-			NbtCompound livesNbt = nbt.getCompound("lives");
-			for (String k : livesNbt.getKeys()) {
-				store.lives.put(UUID.fromString(k), livesNbt.getInt(k));
-			}
-		}
-		if (nbt.contains("lastLifeLostTime", NbtElement.COMPOUND_TYPE)) {
-			NbtCompound lostNbt = nbt.getCompound("lastLifeLostTime");
-			for (String k : lostNbt.getKeys()) {
-				store.lastLifeLostTime.put(UUID.fromString(k), lostNbt.getLong(k));
-			}
-		}
-		if (nbt.contains("lastLifeRegenTime", NbtElement.COMPOUND_TYPE)) {
-			NbtCompound regenNbt = nbt.getCompound("lastLifeRegenTime");
-			for (String k : regenNbt.getKeys()) {
-				store.lastLifeRegenTime.put(UUID.fromString(k), regenNbt.getLong(k));
-			}
-		}
-		if (nbt.contains("pendingBan", NbtElement.COMPOUND_TYPE)) {
-			NbtCompound pendingNbt = nbt.getCompound("pendingBan");
-			for (String k : pendingNbt.getKeys()) {
-				store.pendingBan.put(UUID.fromString(k), pendingNbt.getBoolean(k));
-			}
-		}
-		return store;
-	}
+        NbtCompound regenNbt = new NbtCompound();
+        for (Map.Entry<UUID, Long> entry : lastLifeRegenTime.entrySet()) {
+            regenNbt.putLong(entry.getKey().toString(), entry.getValue());
+        }
+        nbt.put("lastLifeRegenTime", regenNbt);
+
+        NbtCompound pendingNbt = new NbtCompound();
+        for (Map.Entry<UUID, Boolean> entry : pendingBan.entrySet()) {
+            pendingNbt.putBoolean(entry.getKey().toString(), entry.getValue());
+        }
+        nbt.put("pendingBan", pendingNbt);
+
+        return nbt;
+    }
+
+    public static LivesStore fromNbt(NbtCompound nbt, RegistryWrapper.WrapperLookup registryLookup) {
+        LivesStore store = new LivesStore();
+
+        if (nbt.contains("lives")) {
+            NbtCompound livesNbt = nbt.getCompound("lives");
+            for (String key : livesNbt.getKeys()) {
+                store.lives.put(UUID.fromString(key), livesNbt.getInt(key));
+            }
+        }
+        if (nbt.contains("lastLifeLostTime")) {
+            NbtCompound lostNbt = nbt.getCompound("lastLifeLostTime");
+            for (String key : lostNbt.getKeys()) {
+                store.lastLifeLostTime.put(UUID.fromString(key), lostNbt.getLong(key));
+            }
+        }
+        if (nbt.contains("lastLifeRegenTime")) {
+            NbtCompound regenNbt = nbt.getCompound("lastLifeRegenTime");
+            for (String key : regenNbt.getKeys()) {
+                store.lastLifeRegenTime.put(UUID.fromString(key), regenNbt.getLong(key));
+            }
+        }
+        if (nbt.contains("pendingBan")) {
+            NbtCompound pendingNbt = nbt.getCompound("pendingBan");
+            for (String key : pendingNbt.getKeys()) {
+                store.pendingBan.put(UUID.fromString(key), pendingNbt.getBoolean(key));
+            }
+        }
+
+        return store;
+    }
 }
-
-

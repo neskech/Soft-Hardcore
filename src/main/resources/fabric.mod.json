@@ -1,9 +1,9 @@
 {
 	"schemaVersion": 1,
 	"id": "softhardcore",
-	"version": "1.0.6",
+	"version": "${version}",
 	"name": "SoftHardcore",
-	"description": "A soft-hardcore, highly configurable mod that gives each player alimited number of lives. Once players die, they are banned for a configurable amount of time. Other players can drop hearts to give players back lives.",
+	"description": "A soft-hardcore, highly configurable mod that gives each player a limited number of lives. Once players die, they are banned for a configurable amount of time. Other players can drop hearts to give players back lives.",
 	"authors": [
 		"Neskech",
 		"AlternateFire"
@@ -17,7 +17,7 @@
 	"environment": "*",
 	"entrypoints": {
 		"main": [
-          "net.ness.softhardcore.SoftHardcore"
+			"net.ness.softhardcore.SoftHardcore"
 		],
 		"client": [
 			"net.ness.softhardcore.SoftHardcoreClient"
@@ -29,14 +29,10 @@
 	"mixins": [
 		"softhardcore.mixins.json"
 	],
-	"custom": {},
 	"depends": {
 		"fabricloader": ">=0.16.10",
-		"minecraft": "~1.20.1",
-		"java": ">=17",
+		"minecraft": "~1.21.1",
+		"java": ">=21",
 		"fabric-api": "*"
-	},
-	"suggests": {
-		"another-mod": "*"
 	}
 }

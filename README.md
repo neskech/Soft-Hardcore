@@ -1,4 +1,4 @@
-# SoftHardcore
+# SoftHardcore (Fabric 1.21.1)
 
 A soft-hardcore, highly configurable Minecraft mod that gives each player a limited number of lives. Once players run out of lives, they are temporarily banned for a configurable amount of time. Players can drop life hearts to give other players back lives, creating a cooperative survival experience.
 
@@ -55,7 +55,10 @@ This mod requires the following dependencies to function properly:
 
 | Dependency | Version | Description |
 |------------|---------|-------------|
-| **Cardinal Components API** | 5.2.3 | Used for the lives component system |
+| **Fabric Loader** | 0.16.10+ | Mod loader |
+| **Fabric API** | 0.116.12+1.21.1 | Fabric APIs (networking, commands, events) |
+| **Minecraft** | 1.21.1 | Target game version |
+| **Java** | 21+ | Required runtime |
 
 ## ⚙️ Configuration
 

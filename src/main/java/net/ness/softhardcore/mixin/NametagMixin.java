@@ -2,13 +2,13 @@ package net.ness.softhardcore.mixin;
 
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
-import net.minecraft.client.render.VertexConsumerProvider;
-import net.minecraft.client.render.entity.EntityRenderDispatcher;
 import net.minecraft.client.network.AbstractClientPlayerEntity;
+import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.render.entity.PlayerEntityRenderer;
 import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.entity.EntityAttachmentType;
 import net.minecraft.text.Text;
-//import net.minecraft.util.math.RotationAxis;
+import net.minecraft.util.math.Vec3d;
 import net.ness.softhardcore.util.LivesCacheManager;
 import org.joml.Matrix4f;
 import org.spongepowered.asm.mixin.Mixin;
@@ -16,64 +16,76 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-    @Mixin(PlayerEntityRenderer.class)
-    public abstract class NametagMixin {
+@Mixin(PlayerEntityRenderer.class)
+public abstract class NametagMixin {
 
-        @Inject(method = "renderLabelIfPresent", at = @At("TAIL"))
-        private void renderExtraNametag(AbstractClientPlayerEntity player, Text text, MatrixStack matrices, VertexConsumerProvider vertexConsumers, int light, CallbackInfo ci) {
-            Integer cached = LivesCacheManager.getCachedLives(player.getUuid());
-            if (cached == null) return; 
+    @Inject(method = "renderLabelIfPresent", at = @At("TAIL"))
+    private void renderExtraNametag(
+            AbstractClientPlayerEntity player,
+            Text text,
+            MatrixStack matrices,
+            VertexConsumerProvider vertexConsumers,
+            int light,
+            float tickDelta,
+            CallbackInfo ci
+    ) {
+        Integer cached = LivesCacheManager.getCachedLives(player.getUuid());
+        if (cached == null) {
+            return;
+        }
 
-            // Get the dispatcher and text renderer from MinecraftClient
-            MinecraftClient client = MinecraftClient.getInstance();
-            EntityRenderDispatcher dispatcher = client.getEntityRenderDispatcher();
-            TextRenderer textRenderer = client.textRenderer;
-            
-            int lives = cached;
-            int armor = player.getArmor();
-            String heartSymbol = "\u2764";
-            String armorSymbol = "\uD83D\uDEE1"; 
+        Vec3d nameTagPos = player.getAttachments().getPointNullable(EntityAttachmentType.NAME_TAG, 0, player.getYaw(tickDelta));
+        if (nameTagPos == null) {
+            return;
+        }
 
-            String livesText = heartSymbol + " " + lives;
-            String armorText = armorSymbol + " " + armor;
+        MinecraftClient client = MinecraftClient.getInstance();
+        TextRenderer textRenderer = client.textRenderer;
+        int lives = cached;
+        int armor = player.getArmor();
+        String heartSymbol = "\u2764";
+        String armorSymbol = "\uD83D\uDEE1";
 
-            String combined = livesText + "   " + armorText;
-            float totalWidth = textRenderer.getWidth(combined);
-            float startX = -totalWidth / 2f;        
+        String livesText = heartSymbol + " " + lives;
+        String armorText = armorSymbol + " " + armor;
+        String combined = livesText + "   " + armorText;
 
-            int healthColor = 0xDC143C; // Crimson red
-            int armorColor = 0x3399FF; // soft blue
+        float totalWidth = textRenderer.getWidth(combined);
+        float startX = -totalWidth / 2f;
 
-            matrices.push();
-            matrices.translate(0.0F, player.getNameLabelHeight() + 0.35F, 0.0F);
-            matrices.multiply(dispatcher.getRotation());
-            matrices.scale(-0.025F, -0.025F, 0.025F);
-    
-            Matrix4f matrix4f = matrices.peek().getPositionMatrix();
-            int bgColor = (int)(0.15F * 255.0F) << 24; // adjust float to change opacity 
-            fillRect(matrix4f, vertexConsumers, startX - 3, -2, startX + totalWidth + 3, 9, bgColor);
+        int healthColor = 0xDC143C;
+        int armorColor = 0x3399FF;
 
-            float currentX = startX;
-            // Draw health (heart + number)
-            textRenderer.draw(livesText, currentX, 0, healthColor, false, matrix4f, vertexConsumers, TextRenderer.TextLayerType.NORMAL, 0, light);
+        matrices.push();
+        matrices.translate(nameTagPos.x, nameTagPos.y + 0.5, nameTagPos.z);
+        matrices.multiply(client.getEntityRenderDispatcher().getRotation());
+        matrices.scale(0.025F, -0.025F, 0.025F);
+        matrices.translate(0.0F, -9.0F, 0.0F);
 
-            currentX += textRenderer.getWidth(livesText + "  ");
+        Matrix4f matrix = matrices.peek().getPositionMatrix();
+        int bgColor = (int) (0.15F * 255.0F) << 24;
+        fillRect(matrix, vertexConsumers, startX - 3, -2, startX + totalWidth + 3, 9, bgColor);
 
-            // Draw armor (blue)
-            textRenderer.draw(armorText, currentX, 0, armorColor, false, matrix4f, vertexConsumers, TextRenderer.TextLayerType.NORMAL, 0, light);
+        float currentX = startX;
+        textRenderer.draw(livesText, currentX, 0, healthColor, false, matrix, vertexConsumers,
+                TextRenderer.TextLayerType.NORMAL, 0, light);
+        currentX += textRenderer.getWidth(livesText + "  ");
+        textRenderer.draw(armorText, currentX, 0, armorColor, false, matrix, vertexConsumers,
+                TextRenderer.TextLayerType.NORMAL, 0, light);
 
         matrices.pop();
-        }
-
-        private static void fillRect(Matrix4f matrix, VertexConsumerProvider vertexConsumers, float x1, float y1, float x2, float y2, int color) {
-            var buffer = vertexConsumers.getBuffer(net.minecraft.client.render.RenderLayer.getGuiOverlay());
-            float a = (color >> 24 & 255) / 255.0F;
-            float r = (color >> 16 & 255) / 255.0F;
-            float g = (color >> 8 & 255) / 255.0F;
-            float b = (color & 255) / 255.0F;
-            buffer.vertex(matrix, x1, y2, 0).color(r, g, b, a).next();
-            buffer.vertex(matrix, x2, y2, 0).color(r, g, b, a).next();
-            buffer.vertex(matrix, x2, y1, 0).color(r, g, b, a).next();
-            buffer.vertex(matrix, x1, y1, 0).color(r, g, b, a).next();
-        }
     }
+
+    private static void fillRect(Matrix4f matrix, VertexConsumerProvider vertexConsumers,
+                                 float x1, float y1, float x2, float y2, int color) {
+        var buffer = vertexConsumers.getBuffer(net.minecraft.client.render.RenderLayer.getGuiOverlay());
+        float a = (color >> 24 & 255) / 255.0F;
+        float r = (color >> 16 & 255) / 255.0F;
+        float g = (color >> 8 & 255) / 255.0F;
+        float b = (color & 255) / 255.0F;
+        buffer.vertex(matrix, x1, y2, 0).color(r, g, b, a);
+        buffer.vertex(matrix, x2, y2, 0).color(r, g, b, a);
+        buffer.vertex(matrix, x2, y1, 0).color(r, g, b, a);
+        buffer.vertex(matrix, x1, y1, 0).color(r, g, b, a);
+    }
+}

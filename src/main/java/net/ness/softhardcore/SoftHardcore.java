@@ -5,35 +5,25 @@ import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.ness.softhardcore.command.Commands;
 import net.ness.softhardcore.config.MyConfig;
 import net.ness.softhardcore.item.ModItems;
+import net.ness.softhardcore.networking.NetworkManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class SoftHardcore implements ModInitializer {
-	public static final String MOD_ID = "softhardcore";
+    public static final String MOD_ID = "softhardcore";
+    public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 
-	// This logger is used to write text to the console and the log file.
-	// It is considered best practice to use your mod id as the logger's name.
-	// That way, it's clear which mod wrote info, warnings, and errors.
-	public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
+    @Override
+    public void onInitialize() {
+        LOGGER.info("Initializing SoftHardcore");
 
-	@Override
-	public void onInitialize() {
-		// This code runs as soon as Minecraft is in a mod-load-ready state.
-		// However, some things (like resources) may still be uninitialized.
-		// Proceed with mild caution.
+        MyConfig.registerConfig();
+        NetworkManager.registerPayloadTypes();
+        ModItems.register();
+        EventLogic.registerEventLogic();
+        LifeRegenerationTask.register();
 
-		LOGGER.info("Hello Fabric world!");
-		MyConfig.registerConfig();
-		EventLogic.registerEventLogic();
-		ModItems.ReigsterModItems();
-		LifeRegenerationTask.register();
-		// Networking
-		net.ness.softhardcore.networking.NetworkManager.registerClientToServerPackets();
-		
-		// Register commands
-		CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
-			Commands.register(dispatcher, registryAccess);
-		});
-
-	}
+        CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) ->
+                Commands.register(dispatcher, registryAccess));
+    }
 }

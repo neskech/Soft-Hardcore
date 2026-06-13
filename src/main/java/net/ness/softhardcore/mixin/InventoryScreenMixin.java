@@ -1,7 +1,7 @@
 package net.ness.softhardcore.mixin;
 
-import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.gui.screen.ingame.HandledScreen;
 import net.minecraft.client.gui.screen.ingame.InventoryScreen;
 import net.ness.softhardcore.ui.InventoryLivesOverlay;
 import org.spongepowered.asm.mixin.Mixin;
@@ -16,7 +16,7 @@ public abstract class InventoryScreenMixin {
         HandledScreenAccessor screen = (HandledScreenAccessor) this;
         InventoryLivesOverlay.render(
                 context,
-                MinecraftClient.getInstance(),
+                net.minecraft.client.MinecraftClient.getInstance(),
                 screen.softhardcore$getGuiX(),
                 screen.softhardcore$getGuiY()
         );
