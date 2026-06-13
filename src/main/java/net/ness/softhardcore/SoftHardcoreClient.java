@@ -1,29 +1,28 @@
 package net.ness.softhardcore;
 
-import net.fabricmc.api.ClientModInitializer;
-import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
-import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
-import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.Minecraft;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.Mod;
+import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
+import net.neoforged.neoforge.common.NeoForge;
 import net.ness.softhardcore.util.LivesCacheManager;
 
-public class SoftHardcoreClient implements ClientModInitializer {
-    private static MinecraftClient CLIENT;
+@Mod(value = SoftHardcore.MOD_ID, dist = Dist.CLIENT)
+public class SoftHardcoreClient {
+    private static Minecraft CLIENT;
 
-    public static MinecraftClient getClient() {
-        return CLIENT;
+    public SoftHardcoreClient() {
+        NeoForge.EVENT_BUS.register(this);
     }
 
-    @Override
-    public void onInitializeClient() {
-        ClientLifecycleEvents.CLIENT_STARTED.register(client -> {
-            CLIENT = client;
-            // LivesHudOverlayCallback callback = new LivesHudOverlayCallback(client);
-            // HudRenderCallback.EVENT.register(callback); // Removed ugly HUD
-        });
-        net.ness.softhardcore.networking.NetworkManager.registerServerToClientPackets();
+    public static Minecraft getClient() {
+        return CLIENT != null ? CLIENT : Minecraft.getInstance();
+    }
 
-        ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
-            LivesCacheManager.clearLivesCache();
-        });
+    @SubscribeEvent
+    public void onClientLoggingOut(ClientPlayerNetworkEvent.LoggingOut event) {
+        CLIENT = null;
+        LivesCacheManager.clearLivesCache();
     }
 }

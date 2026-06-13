@@ -1,47 +1,47 @@
 package net.ness.softhardcore;
 
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import net.minecraft.network.chat.Component;
+import net.minecraft.ChatFormatting;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.sound.SoundCategory;
-import net.minecraft.sound.SoundEvents;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import net.ness.softhardcore.server.LivesService;
 
 public class LifeRegenerationTask {
     private static long lastCheckTime = 0;
-    private static final int CHECK_SECONDS = 60 * 5; // 5 minutes
-    private static final long CHECK_INTERVAL = 20 * CHECK_SECONDS; // Check every 5 minutes
+    private static final int CHECK_SECONDS = 60 * 5;
+    private static final long CHECK_INTERVAL = 20L * CHECK_SECONDS;
 
-    public static void register() {
-        ServerTickEvents.END_SERVER_TICK.register(LifeRegenerationTask::tick);
+    @SubscribeEvent
+    public static void onServerTick(ServerTickEvent.Post event) {
+        tick(event.getServer());
     }
 
     private static void tick(MinecraftServer server) {
-        long currentTime = server.getTicks();
-        
-        // Only check every CHECK_INTERVAL ticks
+        long currentTime = server.getTickCount();
+
         if (currentTime - lastCheckTime < CHECK_INTERVAL) {
             return;
         }
-        
+
         lastCheckTime = currentTime;
-        
-        // Check all online players for life regeneration
-        for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
-            int regenerationAmount = LivesService.tryRegenerate(server, player.getUuid());
+
+        for (ServerPlayer player : server.getPlayerList().getPlayers()) {
+            int regenerationAmount = LivesService.tryRegenerate(server, player.getUUID());
             if (regenerationAmount > 0) {
-                int currentLives = LivesService.getLives(server, player.getUuid());
-                SoftHardcore.LOGGER.info("Player " + player.getName() + " can regenerate life. Current lives: " + currentLives);
-                player.getWorld().playSound(null, player.getX(), player.getY(), player.getZ(), 
-                    SoundEvents.ENTITY_PLAYER_LEVELUP, SoundCategory.PLAYERS, 1.0f, 1.2f);
-                String messageText = regenerationAmount == 1 ? 
-                    "You have regenerated a life!" :
-                    "You have regenerated " + regenerationAmount + " lives!";
-                Text message = Text.literal(messageText).formatted(Formatting.GREEN);
-                player.sendMessage(message);
-                SoftHardcore.LOGGER.info("Player " + player.getName() + " regenerated a life! New lives: " + currentLives);
+                int currentLives = LivesService.getLives(server, player.getUUID());
+                SoftHardcore.LOGGER.info("Player {} can regenerate life. Current lives: {}", player.getName().getString(), currentLives);
+                player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
+                        SoundEvents.PLAYER_LEVELUP, SoundSource.PLAYERS, 1.0f, 1.2f);
+                String messageText = regenerationAmount == 1 ?
+                        "You have regenerated a life!" :
+                        "You have regenerated " + regenerationAmount + " lives!";
+                Component message = Component.literal(messageText).withStyle(ChatFormatting.GREEN);
+                player.sendSystemMessage(message);
+                SoftHardcore.LOGGER.info("Player {} regenerated a life! New lives: {}", player.getName().getString(), currentLives);
             }
         }
     }

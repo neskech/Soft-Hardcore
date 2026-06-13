@@ -1,229 +1,190 @@
 package net.ness.softhardcore;
 
-import net.fabricmc.fabric.api.networking.v1.PacketSender;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
-import net.minecraft.entity.damage.DamageSource;
-import net.minecraft.item.ItemStack;
-import net.minecraft.registry.Registries;
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.network.ServerPlayNetworkHandler;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.text.Text;
-import net.minecraft.util.ActionResult;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.Identifier;
-import net.ness.softhardcore.server.LivesService;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.scores.PlayerTeam;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.ness.softhardcore.config.HeartDropMode;
 import net.ness.softhardcore.config.MyConfig;
-import net.ness.softhardcore.event.PlayerDeathCallback;
-import net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents;
-
+import net.ness.softhardcore.item.ModItems;
+import net.ness.softhardcore.server.LivesService;
+import net.ness.softhardcore.server.LivesStore;
 
 public class EventLogic {
 
-    public static void registerEventLogic() {
-        PlayerDeathCallback.EVENT.register((player, damageSource) -> lifeDecrementLogic(player, damageSource));
-        PlayerDeathCallback.EVENT.register((player, damageSource) -> lifeDropLogic(player, damageSource));
-        ServerPlayerEvents.AFTER_RESPAWN.register(EventLogic::respawnEventLogic);
-        ServerPlayConnectionEvents.JOIN.register(EventLogic::loginEventLogic);
-        ServerPlayConnectionEvents.DISCONNECT.register(EventLogic::disconnectEventLogic);
+    @SubscribeEvent
+    public static void onLivingDeath(LivingDeathEvent event) {
+        if (!(event.getEntity() instanceof ServerPlayer player)) {
+            return;
+        }
+        lifeDecrementLogic(player, event.getSource());
+        lifeDropLogic(player, event.getSource());
     }
 
-    private static ActionResult lifeDecrementLogic(ServerPlayerEntity player, DamageSource damageSource) {
-        int lives = LivesService.decrement(player.getServer(), player.getUuid());
+    @SubscribeEvent
+    public static void onPlayerLoggedIn(PlayerEvent.PlayerLoggedInEvent event) {
+        if (!(event.getEntity() instanceof ServerPlayer player)) {
+            return;
+        }
+        loginEventLogic(player);
+    }
 
-        // Only set pending ban if the player's run out of lives
+    @SubscribeEvent
+    public static void onPlayerLoggedOut(PlayerEvent.PlayerLoggedOutEvent event) {
+        if (!(event.getEntity() instanceof ServerPlayer player)) {
+            return;
+        }
+        disconnectEventLogic(player);
+    }
+
+    @SubscribeEvent
+    public static void onPlayerRespawn(PlayerEvent.PlayerRespawnEvent event) {
+        if (!(event.getEntity() instanceof ServerPlayer newPlayer)) {
+            return;
+        }
+        respawnEventLogic(newPlayer);
+    }
+
+    private static void lifeDecrementLogic(ServerPlayer player, DamageSource damageSource) {
+        int lives = LivesService.decrement(player.server, player.getUUID());
+
         if (lives > 0) {
-            Text message = Text.literal("You've just lost a life...").formatted(Formatting.RED);
-            player.sendMessage(message);
-            return ActionResult.PASS;
+            Component message = Component.literal("You've just lost a life...").withStyle(ChatFormatting.RED);
+            player.sendSystemMessage(message);
+            return;
         }
 
-        // Set pending ban instead of immediately banning
-        LivesService.setPendingBan(player.getServer(), player.getUuid(), true);
-        Text message = Text.literal("You've run out of lives! You will be banned when you respawn.").formatted(Formatting.RED);
-        player.sendMessage(message);
-
-        return ActionResult.PASS;
+        LivesService.setPendingBan(player.server, player.getUUID(), true);
+        Component message = Component.literal("You've run out of lives! You will be banned when you respawn.").withStyle(ChatFormatting.RED);
+        player.sendSystemMessage(message);
     }
 
-    private static ActionResult lifeDropLogic(ServerPlayerEntity player, DamageSource damageSource) {
-        // Determine if we should drop hearts based on the configured mode
+    private static void lifeDropLogic(ServerPlayer player, DamageSource damageSource) {
         if (shouldDropHearts(player, damageSource)) {
-            Identifier id = new Identifier(SoftHardcore.MOD_ID, "life_heart");
-            ItemStack lifeDrops = new ItemStack(Registries.ITEM.get(id), MyConfig.LIVES_DROPPED);
-            player.dropItem(lifeDrops, false);
+            ItemStack lifeDrops = new ItemStack(ModItems.LIFE_HEART.get(), MyConfig.LIVES_DROPPED);
+            player.drop(lifeDrops, false);
         }
-
-        return ActionResult.PASS;
     }
 
-    private static boolean shouldDropHearts(ServerPlayerEntity player, DamageSource damageSource) {
+    private static boolean shouldDropHearts(ServerPlayer player, DamageSource damageSource) {
         HeartDropMode mode = MyConfig.HEART_DROP_MODE;
-        boolean isPlayerKill = damageSource.getAttacker() instanceof ServerPlayerEntity;
-        
-        // If mode is NEVER, never drop hearts regardless of probabilities
+        boolean isPlayerKill = damageSource.getEntity() instanceof ServerPlayer;
+
         if (mode == HeartDropMode.NEVER) {
             return false;
         }
-        
-        boolean shouldDrop = false;
-        
-        switch (mode) {
-            case PASSIVE:
-                // Drop hearts only on natural deaths (not player kills)
-                shouldDrop = !isPlayerKill;
-                break;
-                
-            case NEUTRAL:
-                // Drop hearts on any death
-                shouldDrop = true;
-                break;
-                
-            case TEAM:
-                // Drop hearts on natural deaths + when killed by different team player
+
+        boolean shouldDrop = switch (mode) {
+            case PASSIVE -> !isPlayerKill;
+            case NEUTRAL -> true;
+            case TEAM -> {
                 if (!isPlayerKill) {
-                    shouldDrop = true; // Natural death
-                } else {
-                    ServerPlayerEntity attacker = (ServerPlayerEntity) damageSource.getAttacker();
-                    shouldDrop = !areOnSameTeam(player, attacker);
+                    yield true;
                 }
-                break;
-                
-            case COMPETITIVE:
-                // Drop hearts ONLY when killed by different team player
+                ServerPlayer attacker = (ServerPlayer) damageSource.getEntity();
+                yield !areOnSameTeam(player, attacker);
+            }
+            case COMPETITIVE -> {
                 if (!isPlayerKill) {
-                    shouldDrop = false; // Natural death - no hearts dropped
-                } else {
-                    ServerPlayerEntity competitiveAttacker = (ServerPlayerEntity) damageSource.getAttacker();
-                    shouldDrop = !areOnSameTeam(player, competitiveAttacker);
+                    yield false;
                 }
-                break;
-                
-            case VENGEFUL:
-                // Drop hearts ONLY when killed by another player (any player, regardless of team)
-                shouldDrop = isPlayerKill;
-                break;
-                
-            default:
-                shouldDrop = true; // Default to dropping hearts
-        }
-        
-        // If we should drop hearts based on mode, apply probability
+                ServerPlayer competitiveAttacker = (ServerPlayer) damageSource.getEntity();
+                yield !areOnSameTeam(player, competitiveAttacker);
+            }
+            case VENGEFUL -> isPlayerKill;
+            default -> true;
+        };
+
         if (shouldDrop) {
-            double probability = isPlayerKill ? 
-                MyConfig.PLAYER_DEATH_HEART_DROP_PROBABILITY : 
-                MyConfig.PASSIVE_DEATH_HEART_DROP_PROBABILITY;
+            double probability = isPlayerKill ?
+                    MyConfig.PLAYER_DEATH_HEART_DROP_PROBABILITY :
+                    MyConfig.PASSIVE_DEATH_HEART_DROP_PROBABILITY;
             return Math.random() < probability;
         }
-        
+
         return false;
     }
 
-    private static boolean areOnSameTeam(ServerPlayerEntity player1, ServerPlayerEntity player2) {
+    private static boolean areOnSameTeam(ServerPlayer player1, ServerPlayer player2) {
         if (player1 == null || player2 == null) {
             return false;
         }
-        
-        net.minecraft.scoreboard.AbstractTeam team1 = player1.getScoreboardTeam();
-        net.minecraft.scoreboard.AbstractTeam team2 = player2.getScoreboardTeam();
-        
-        // If both players have no team, consider them on the same "team"
+
+        PlayerTeam team1 = player1.getTeam();
+        PlayerTeam team2 = player2.getTeam();
+
         if (team1 == null && team2 == null) {
             return true;
         }
-        
-        // If only one has a team, they're on different teams
+
         if (team1 == null || team2 == null) {
             return false;
         }
-        
-        // Compare teams
+
         return team1.equals(team2);
     }
 
-    private static void loginEventLogic(ServerPlayNetworkHandler handler, PacketSender p, MinecraftServer m) {
-        ServerPlayerEntity player = handler.getPlayer();
+    private static void loginEventLogic(ServerPlayer player) {
+        MinecraftServer server = player.server;
 
-        // If the player has 0 lives, check if their ban has expired
-        if (LivesService.getLives(m, player.getUuid()) <= 0) {
+        if (LivesService.getLives(server, player.getUUID()) <= 0) {
             long currentTime = System.currentTimeMillis();
-            long lastLifeLostTime = net.ness.softhardcore.server.LivesStore.get(m).getLastLifeLostTime(player.getUuid());
+            long lastLifeLostTime = LivesStore.get(server).getLastLifeLostTime(player.getUUID());
             long banDurationMillis = MyConfig.BAN_DURATION.toMillis();
             long timeSinceLifeLost = currentTime - lastLifeLostTime;
-            
-            // If the ban hasn't expired yet, kick them
+
             if (timeSinceLifeLost < banDurationMillis) {
-                long remainingMillis = (banDurationMillis - timeSinceLifeLost);
+                long remainingMillis = banDurationMillis - timeSinceLifeLost;
                 String human = formatDuration(remainingMillis);
                 String kickMessage = "You ran out of lives! You can rejoin in " + human + ".";
-                player.networkHandler.disconnect(Text.literal(kickMessage));
+                player.connection.disconnect(Component.literal(kickMessage));
                 return;
             }
-            
-            // Ban has expired, restore their lives
-            // Clear any pending ban flag that might be stuck
-            LivesService.setPendingBan(m, player.getUuid(), false);
-            
-            Text message = Text.literal("Welcome back! Your lives have been refilled.").formatted(Formatting.GREEN);
-            player.sendMessage(message);
-            LivesService.setLives(m, player.getUuid(), MyConfig.RETURNING_LIVES);
-            // Set both timestamps to current time so they don't immediately regenerate
-            LivesService.markBanEnd(m, player.getUuid());
-            
-            // Broadcasts handle client cache updates
+
+            LivesService.setPendingBan(server, player.getUUID(), false);
+
+            Component message = Component.literal("Welcome back! Your lives have been refilled.").withStyle(ChatFormatting.GREEN);
+            player.sendSystemMessage(message);
+            LivesService.setLives(server, player.getUUID(), MyConfig.RETURNING_LIVES);
+            LivesService.markBanEnd(server, player.getUUID());
         }
-        
-        // Ensure store entry exists and send bulk lives to the joining player
-        int joiningLives = net.ness.softhardcore.server.LivesService.getLives(m, player.getUuid());
-        net.ness.softhardcore.server.LivesService.broadcastBulkTo(player);
-        // Also broadcast the joining player's lives to all clients so existing players see them
-        net.ness.softhardcore.networking.NetworkManager.broadcastLivesOne(m, player.getUuid(), joiningLives);
+
+        int joiningLives = LivesService.getLives(server, player.getUUID());
+        LivesService.broadcastBulkTo(player);
+        net.ness.softhardcore.networking.NetworkManager.broadcastLivesOne(server, player.getUUID(), joiningLives);
     }
 
-    private static void syncAllPlayersLives(MinecraftServer server) {}
+    private static void respawnEventLogic(ServerPlayer newPlayer) {
+        if (LivesService.isPendingBan(newPlayer.server, newPlayer.getUUID())) {
+            LivesService.setPendingBan(newPlayer.server, newPlayer.getUUID(), false);
 
-    /**
-     * Handles respawn events - bans players who have pending bans
-     */
-    private static void respawnEventLogic(ServerPlayerEntity oldPlayer, ServerPlayerEntity newPlayer, boolean alive) {
-        if (LivesService.isPendingBan(newPlayer.getServer(), newPlayer.getUuid())) {
-            // Clear the pending ban flag
-            LivesService.setPendingBan(newPlayer.getServer(), newPlayer.getUuid(), false);
-            
-            // Now ban the player
-            MinecraftServer server = newPlayer.getServer();
+            MinecraftServer server = newPlayer.server;
             if (server == null) {
-                Text message = Text.literal("ERROR: Player has pending ban, but server is null").formatted(Formatting.RED);
-                newPlayer.sendMessage(message);
+                Component message = Component.literal("ERROR: Player has pending ban, but server is null").withStyle(ChatFormatting.RED);
+                newPlayer.sendSystemMessage(message);
                 return;
             }
 
-            // Store the ban time
-            LivesService.markBanStart(server, newPlayer.getUuid());
-            
-            // Calculate when the ban will expire (not used directly in message)
+            LivesService.markBanStart(server, newPlayer.getUUID());
+
             long banDurationMillis = MyConfig.BAN_DURATION.toMillis();
-            
-            // Kick the player from the server with a message
             String banMessage = "You ran out of lives! You can rejoin in " + formatDuration(banDurationMillis) + ".";
-            newPlayer.networkHandler.disconnect(Text.literal(banMessage));
+            newPlayer.connection.disconnect(Component.literal(banMessage));
         }
     }
 
-    /**
-     * Handles disconnect events - stores the ban time for players who disconnect with pending bans
-     */
-    private static void disconnectEventLogic(ServerPlayNetworkHandler handler, MinecraftServer server) {
-        ServerPlayerEntity player = handler.getPlayer();
-        if (LivesService.isPendingBan(server, player.getUuid())) {
-            // Player disconnected with a pending ban, store the time they lost their life
-            LivesService.markBanStart(server, player.getUuid());
-            
-            // Clear the pending ban flag
-            LivesService.setPendingBan(server, player.getUuid(), false);
-            
-            server.sendMessage(Text.literal("Player " + player.getName() + " disconnected with pending ban"));
+    private static void disconnectEventLogic(ServerPlayer player) {
+        MinecraftServer server = player.server;
+        if (LivesService.isPendingBan(server, player.getUUID())) {
+            LivesService.markBanStart(server, player.getUUID());
+            LivesService.setPendingBan(server, player.getUUID(), false);
+            server.sendSystemMessage(Component.literal("Player " + player.getName().getString() + " disconnected with pending ban"));
         }
     }
 
@@ -253,5 +214,4 @@ public class EventLogic {
         if (sb.length() > 0) sb.append(", ");
         sb.append(part);
     }
-
 }

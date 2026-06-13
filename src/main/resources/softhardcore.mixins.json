@@ -1,14 +1,15 @@
 {
 	"required": true,
 	"package": "net.ness.softhardcore.mixin",
-	"compatibilityLevel": "JAVA_17",
-  "mixins": [
-    "PlayerDeathMixin",
-    "PlayersListMixin",
-    "NametagMixin",
-    "HandledScreenAccessor",
-    "InventoryScreenMixin"
-  ],
+	"compatibilityLevel": "JAVA_21",
+	"client": [
+		"PlayersListMixin",
+		"NametagMixin",
+		"InventoryScreenMixin",
+		"HandledScreenAccessor"
+	],
+	"mixins": [
+	],
 	"injectors": {
 		"defaultRequire": 1
 	}

@@ -1,7 +1,7 @@
 package net.ness.softhardcore.ui;
 
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphics;
 import net.ness.softhardcore.config.MyConfig;
 import net.ness.softhardcore.util.LivesCacheManager;
 
@@ -23,19 +23,19 @@ public final class InventoryLivesOverlay {
     private InventoryLivesOverlay() {
     }
 
-    public static void render(DrawContext context, MinecraftClient client, int guiX, int guiY) {
+    public static void render(GuiGraphics graphics, Minecraft client, int guiX, int guiY) {
         if (!MyConfig.INVENTORY_LIVES_OVERLAY_ENABLED || client.player == null) {
             return;
         }
 
-        Integer cachedLives = LivesCacheManager.getCachedLives(client.player.getUuid());
+        Integer cachedLives = LivesCacheManager.getCachedLives(client.player.getUUID());
         if (cachedLives == null) {
             return;
         }
 
         String countText = String.valueOf(cachedLives);
-        int heartWidth = client.textRenderer.getWidth(HEART_SYMBOL);
-        int countWidth = client.textRenderer.getWidth(countText);
+        int heartWidth = client.font.width(HEART_SYMBOL);
+        int countWidth = client.font.width(countText);
         int contentWidth = heartWidth + HEART_TEXT_GAP + countWidth;
         int boxWidth = HORIZONTAL_PADDING * 2 + contentWidth;
 
@@ -43,7 +43,7 @@ public final class InventoryLivesOverlay {
         int boxY = guiY - BOX_HEIGHT - BOX_GAP;
         int boxBottom = boxY + BOX_HEIGHT;
 
-        drawPanel(context, boxX, boxY, boxWidth, BOX_HEIGHT);
+        drawPanel(graphics, boxX, boxY, boxWidth, BOX_HEIGHT);
 
         int contentLeft = boxX + HORIZONTAL_PADDING;
         int contentRight = boxX + boxWidth - HORIZONTAL_PADDING;
@@ -51,16 +51,16 @@ public final class InventoryLivesOverlay {
         int heartX = contentLeft + (contentRight - contentLeft - contentWidth) / 2;
         int countX = heartX + heartWidth + HEART_TEXT_GAP;
 
-        context.drawText(client.textRenderer, HEART_SYMBOL, heartX, textY, HEART_COLOR, false);
-        context.drawText(client.textRenderer, countText, countX, textY, COUNT_COLOR, false);
+        graphics.drawString(client.font, HEART_SYMBOL, heartX, textY, HEART_COLOR, false);
+        graphics.drawString(client.font, countText, countX, textY, COUNT_COLOR, false);
     }
 
     private static int centeredTextY(int top, int bottom) {
         return (top + bottom - 9) / 2 + 1;
     }
 
-    private static void drawPanel(DrawContext context, int x, int y, int width, int height) {
-        drawRoundedRect(context, x, y, width, height, CORNER_RADIUS, BORDER_COLOR);
+    private static void drawPanel(GuiGraphics graphics, int x, int y, int width, int height) {
+        drawRoundedRect(graphics, x, y, width, height, CORNER_RADIUS, BORDER_COLOR);
 
         int inset = BORDER_WIDTH;
         int innerWidth = width - inset * 2;
@@ -70,30 +70,30 @@ public final class InventoryLivesOverlay {
         }
 
         int innerRadius = Math.max(0, CORNER_RADIUS - inset);
-        drawRoundedRect(context, x + inset, y + inset, innerWidth, innerHeight, innerRadius, PANEL_COLOR);
+        drawRoundedRect(graphics, x + inset, y + inset, innerWidth, innerHeight, innerRadius, PANEL_COLOR);
     }
 
-    private static void drawRoundedRect(DrawContext context, int x, int y, int width, int height, int cornerRadius, int color) {
+    private static void drawRoundedRect(GuiGraphics graphics, int x, int y, int width, int height, int cornerRadius, int color) {
         int radius = Math.min(cornerRadius, Math.min(width, height) / 2);
         if (radius <= 0) {
-            context.fill(x, y, x + width, y + height, color);
+            graphics.fill(x, y, x + width, y + height, color);
             return;
         }
 
-        context.fill(x + radius, y, x + width - radius, y + height, color);
-        context.fill(x, y + radius, x + radius, y + height - radius, color);
-        context.fill(x + width - radius, y + radius, x + width, y + height - radius, color);
+        graphics.fill(x + radius, y, x + width - radius, y + height, color);
+        graphics.fill(x, y + radius, x + radius, y + height - radius, color);
+        graphics.fill(x + width - radius, y + radius, x + width, y + height - radius, color);
 
-        context.fill(x + 1, y, x + radius, y + 1, color);
-        context.fill(x, y + 1, x + 1, y + radius, color);
+        graphics.fill(x + 1, y, x + radius, y + 1, color);
+        graphics.fill(x, y + 1, x + 1, y + radius, color);
 
-        context.fill(x + width - radius, y, x + width - 1, y + 1, color);
-        context.fill(x + width - 1, y + 1, x + width, y + radius, color);
+        graphics.fill(x + width - radius, y, x + width - 1, y + 1, color);
+        graphics.fill(x + width - 1, y + 1, x + width, y + radius, color);
 
-        context.fill(x, y + height - radius, x + 1, y + height - 1, color);
-        context.fill(x + 1, y + height - 1, x + radius, y + height, color);
+        graphics.fill(x, y + height - radius, x + 1, y + height - 1, color);
+        graphics.fill(x + 1, y + height - 1, x + radius, y + height, color);
 
-        context.fill(x + width - radius, y + height - 1, x + width - 1, y + height, color);
-        context.fill(x + width - 1, y + height - radius, x + width, y + height - 1, color);
+        graphics.fill(x + width - radius, y + height - 1, x + width - 1, y + height, color);
+        graphics.fill(x + width - 1, y + height - radius, x + width, y + height - 1, color);
     }
 }

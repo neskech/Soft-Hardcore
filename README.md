@@ -49,13 +49,26 @@ The mod also provides some minor UI reworks, lives and armor information now app
 - **Robust Error Handling**: Graceful handling of invalid config values
 - **Enhanced Feedback**: Clear success/error messages for all operations
 
-### 🚀 Dependencies
-
-This mod requires the following dependencies to function properly:
+### Requirements
 
 | Dependency | Version | Description |
 |------------|---------|-------------|
-| **Cardinal Components API** | 5.2.3 | Used for the lives component system |
+| **NeoForge** | 21.1.x | Mod loader for Minecraft 1.21.1 |
+| **Java** | 21 | Required for building and running |
+
+Install [NeoForge 21.1.x](https://projects.neoforged.net/neoforged/neoforge) for Minecraft 1.21.1, then place the mod JAR in your `mods` folder.
+
+### Development
+
+This branch targets **NeoForge 1.21.1** and requires **Java 21**.
+
+```bash
+./gradlew build      # Build the mod JAR
+./gradlew runClient  # Launch a dev client (username pinned to DevPlayer)
+./gradlew runServer  # Launch a dev server
+```
+
+Built artifacts are written to `build/libs/`.
 
 ## ⚙️ Configuration
 
@@ -149,7 +162,7 @@ player.death.heart.drop.probability=1.0
 # Lives at or above this value will not regenerate
 life.regen.ceiling=25
 
-# Show remaining lives below the crafting output in the inventory screen
+# Show remaining lives above the inventory screen
 inventory.lives.overlay.enabled=true
 ```
 
@@ -322,7 +335,7 @@ The mod supports different modes for when life hearts are dropped:
 ### Inventory Lives Overlay
 
 - Shows your remaining lives in the survival inventory screen
-- Displayed below the crafting output slot with a heart icon and life count
+- Displayed above the inventory UI in the top-left corner with a heart icon and life count
 - Can be enabled or disabled via `inventory.lives.overlay.enabled`
 
 ## 📄 License
